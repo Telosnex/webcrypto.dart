@@ -1,4 +1,8 @@
 # 0.6.2-wip
+* Synced with the latest upstream `google/webcrypto.dart` changes.
+* Added a content-addressed native build cache under `~/.cache/webcrypto.dart`
+  to avoid recompiling BoringSSL when the native inputs are unchanged.
+* Preserved the `globalThis` web-worker compatibility fix.
 * Fixed JS interop to enable WebAssembly.
 
 # 0.6.1
