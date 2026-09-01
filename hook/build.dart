@@ -29,37 +29,59 @@ const _assetName = 'webcrypto.dart';
 const _cacheSchema = 'webcrypto-native-assets-v3';
 
 void main(List<String> args) async {
+  final hookLog = _HookLogBuffer('webcrypto');
   await build(args, (input, output) async {
     if (!input.config.buildCodeAssets) return;
 
+    final hookStopwatch = Stopwatch()..start();
     final code = input.config.code;
     _validateTarget(code.targetOS, code.targetArchitecture);
 
-    final logger = Logger.root
+    final logger = Logger('')
       ..level = Level.ALL
-      ..onRecord.listen((record) => stderr.writeln(record.message));
+      ..onRecord.listen((record) => hookLog.add(record.message));
 
+    final collectStopwatch = Stopwatch()..start();
     final nativeInputs = await _collectNativeInputs(input.packageRoot);
     output.dependencies.addAll(nativeInputs.map((input) => input.uri));
+    logger.info(
+      'Enumerated ${nativeInputs.length} native inputs in '
+      '${_formatDuration(collectStopwatch.elapsed)}',
+    );
 
     final defines = <String, String>{
       'CMAKE_BUILD_TYPE': 'Release',
       'CMAKE_POSITION_INDEPENDENT_CODE': 'ON',
     };
+    final keyStopwatch = Stopwatch()..start();
     final buildKey = await _computeBuildKey(
       code: code,
       defines: defines,
       inputs: nativeInputs,
     );
+    logger.info(
+      'Computed build key in ${_formatDuration(keyStopwatch.elapsed)}',
+    );
+
     final libraryFileName = _libraryFileName(code.targetOS);
     final cacheDir = _cacheDirectory(buildKey);
     final cachedLibrary = File(p.join(cacheDir.path, libraryFileName));
     final cachedDigest = File('${cachedLibrary.path}.sha256');
     final lockFile = File('${cacheDir.path}.lock');
 
-    if (!await _validLibrary(cachedLibrary, cachedDigest)) {
+    logger.info('Build key: $buildKey');
+    logger.info('Cache: ${cacheDir.path}');
+
+    final cacheHit = await _validLibrary(cachedLibrary, cachedDigest);
+    if (!cacheHit) {
+      final lockAndBuildStopwatch = Stopwatch()..start();
       await _withExclusiveLock(lockFile, () async {
-        if (await _validLibrary(cachedLibrary, cachedDigest)) return;
+        if (await _validLibrary(cachedLibrary, cachedDigest)) {
+          logger.info(
+            'Build completed by another process while waiting for the lock',
+          );
+          return;
+        }
         await _buildIntoCache(
           input: input,
           output: output,
@@ -70,16 +92,21 @@ void main(List<String> args) async {
           libraryFileName: libraryFileName,
           logger: logger,
         );
-      });
-    }
+      }, logger: logger);
 
-    if (!await _validLibrary(cachedLibrary, cachedDigest)) {
-      throw StateError(
-        'webcrypto cache publication failed for ${code.targetOS.name}/'
-        '${code.targetArchitecture.name}: ${cachedLibrary.path}',
+      if (!await _validLibrary(cachedLibrary, cachedDigest)) {
+        throw StateError(
+          'webcrypto cache publication failed for ${code.targetOS.name}/'
+          '${code.targetArchitecture.name}: ${cachedLibrary.path}',
+        );
+      }
+      logger.info(
+        'Cache miss resolved in '
+        '${_formatDuration(lockAndBuildStopwatch.elapsed)}',
       );
     }
 
+    final publishStopwatch = Stopwatch()..start();
     final publishedLibrary = await _publish(
       cachedLibrary,
       input.outputDirectory,
@@ -93,7 +120,54 @@ void main(List<String> args) async {
         file: publishedLibrary.uri,
       ),
     );
-  });
+    logger.info(
+      cacheHit
+          ? 'Hook completed from cache in '
+                '${_formatDuration(hookStopwatch.elapsed)} '
+                '(publish/register '
+                '${_formatDuration(publishStopwatch.elapsed)})'
+          : 'Hook completed after build in '
+                '${_formatDuration(hookStopwatch.elapsed)} '
+                '(publish/register '
+                '${_formatDuration(publishStopwatch.elapsed)})',
+    );
+  }).whenComplete(hookLog.flush);
+}
+
+/// Collects logger records so hooks_runner receives one newline-normalized
+/// stderr message instead of adding a blank line after every streamed chunk.
+final class _HookLogBuffer {
+  _HookLogBuffer(this.tag);
+
+  final String tag;
+  final List<String> _lines = [];
+
+  void add(String message) {
+    final normalized = message.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    for (final line in normalized.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      _lines.add('[$tag] $line');
+    }
+  }
+
+  void flush() {
+    if (_lines.isEmpty) return;
+    // hooks_runner adds the terminating newline while capturing this chunk.
+    stderr.write(_lines.join('\n'));
+  }
+}
+
+String _formatDuration(Duration duration) {
+  final millis = duration.inMilliseconds;
+  if (millis < 1000) return '${millis}ms';
+  final seconds = duration.inSeconds;
+  final remainderMillis = millis - seconds * 1000;
+  if (seconds < 60) {
+    return '$seconds.${(remainderMillis ~/ 100).toString()}s';
+  }
+  final minutes = seconds ~/ 60;
+  final remainderSeconds = seconds % 60;
+  return '${minutes}m ${remainderSeconds}s';
 }
 
 Future<void> _buildIntoCache({
@@ -123,7 +197,11 @@ Future<void> _buildIntoCache({
       parallelUseAllProcessors: true,
       logger: logger,
     );
+    final cmakeStopwatch = Stopwatch()..start();
     await builder.run(input: input, output: output, logger: logger);
+    logger.info(
+      'CMake build finished in ${_formatDuration(cmakeStopwatch.elapsed)}',
+    );
 
     final builtLibrary = await _findLibrary(buildDir, libraryFileName);
     if (builtLibrary == null || !await _validNonEmptyFile(builtLibrary)) {
@@ -341,12 +419,19 @@ Directory _cacheDirectory(String buildKey) {
 
 Future<void> _withExclusiveLock(
   File lockFile,
-  Future<void> Function() body,
-) async {
+  Future<void> Function() body, {
+  required Logger logger,
+}) async {
   await lockFile.parent.create(recursive: true);
   final randomAccessFile = await lockFile.open(mode: FileMode.append);
   try {
+    final lockStopwatch = Stopwatch()..start();
     await randomAccessFile.lock(FileLock.blockingExclusive);
+    if (lockStopwatch.elapsedMilliseconds > 100) {
+      logger.info(
+        'Waited ${_formatDuration(lockStopwatch.elapsed)} for build lock',
+      );
+    }
     try {
       await body();
     } finally {
