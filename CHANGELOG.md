@@ -4,6 +4,8 @@
   to avoid recompiling BoringSSL when the native inputs are unchanged.
 * Preserved the `globalThis` web-worker compatibility fix.
 * Fixed JS interop to enable WebAssembly.
+* Fixed Windows arm64 builds: disable MSVC warning C4702 (unreachable code),
+  matching upstream BoringSSL.
 
 # 0.6.1
 * Added Dart native build hooks and native asset lookup for the bundled
