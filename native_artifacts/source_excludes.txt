@@ -1,0 +1,4 @@
+# Files that the native build does not read (ADR 005 D3).
+doc/
+tool/
+analysis_options.yaml

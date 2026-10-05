@@ -10,7 +10,10 @@
 /// Asset on every supported native target.
 ///
 /// Web builds do not request code assets, so this hook intentionally does
-/// nothing for them. Native builds use a content-addressed, process-locked
+/// nothing for them. With package:native_prebuilt, a native build downloads
+/// the library from a release when native_artifacts/prebuilt.json matches
+/// the sources (user define `native_build`: auto, download or source).
+/// Otherwise it builds from source into a content-addressed, process-locked
 /// cache because compiling BoringSSL for every hook invocation is expensive.
 library;
 
@@ -22,11 +25,12 @@ import 'package:code_assets/code_assets.dart';
 import 'package:crypto/crypto.dart';
 import 'package:hooks/hooks.dart';
 import 'package:logging/logging.dart';
+import 'package:native_prebuilt/native_prebuilt.dart';
 import 'package:native_toolchain_cmake/native_toolchain_cmake.dart';
 import 'package:path/path.dart' as p;
 
 const _assetName = 'webcrypto.dart';
-const _cacheSchema = 'webcrypto-native-assets-v3';
+const _cacheSchema = 'webcrypto-native-assets-v4';
 
 void main(List<String> args) async {
   final hookLog = _HookLogBuffer('webcrypto');
@@ -41,97 +45,101 @@ void main(List<String> args) async {
       ..level = Level.ALL
       ..onRecord.listen((record) => hookLog.add(record.message));
 
-    final collectStopwatch = Stopwatch()..start();
-    final nativeInputs = await _collectNativeInputs(input.packageRoot);
-    output.dependencies.addAll(nativeInputs.map((input) => input.uri));
-    logger.info(
-      'Enumerated ${nativeInputs.length} native inputs in '
-      '${_formatDuration(collectStopwatch.elapsed)}',
-    );
+    await NativePrebuilt(input: input, output: output, log: logger.info).run((
+      source,
+    ) async {
+      await _buildFromSource(
+        input: input,
+        output: output,
+        sourceKey: source.sourceKey.key,
+        logger: logger,
+      );
+    });
+    logger.info('Hook completed in ${_formatDuration(hookStopwatch.elapsed)}');
+  }).whenComplete(hookLog.flush);
+}
 
-    final defines = <String, String>{
-      'CMAKE_BUILD_TYPE': 'Release',
-      'CMAKE_POSITION_INDEPENDENT_CODE': 'ON',
-    };
-    final keyStopwatch = Stopwatch()..start();
-    final buildKey = await _computeBuildKey(
-      code: code,
-      defines: defines,
-      inputs: nativeInputs,
-    );
-    logger.info(
-      'Computed build key in ${_formatDuration(keyStopwatch.elapsed)}',
-    );
+Future<void> _buildFromSource({
+  required BuildInput input,
+  required BuildOutputBuilder output,
+  required String sourceKey,
+  required Logger logger,
+}) async {
+  final code = input.config.code;
+  final defines = <String, String>{
+    'CMAKE_BUILD_TYPE': 'Release',
+    'CMAKE_POSITION_INDEPENDENT_CODE': 'ON',
+  };
+  final buildKey = await _computeBuildKey(
+    code: code,
+    defines: defines,
+    sourceKey: sourceKey,
+  );
 
-    final libraryFileName = _libraryFileName(code.targetOS);
-    final cacheDir = _cacheDirectory(buildKey);
-    final cachedLibrary = File(p.join(cacheDir.path, libraryFileName));
-    final cachedDigest = File('${cachedLibrary.path}.sha256');
-    final lockFile = File('${cacheDir.path}.lock');
+  final libraryFileName = _libraryFileName(code.targetOS);
+  final cacheDir = _cacheDirectory(buildKey);
+  final cachedLibrary = File(p.join(cacheDir.path, libraryFileName));
+  final cachedDigest = File('${cachedLibrary.path}.sha256');
+  final lockFile = File('${cacheDir.path}.lock');
 
-    logger.info('Build key: $buildKey');
-    logger.info('Cache: ${cacheDir.path}');
+  logger.info('Build key: $buildKey');
+  logger.info('Cache: ${cacheDir.path}');
 
-    final cacheHit = await _validLibrary(cachedLibrary, cachedDigest);
-    if (!cacheHit) {
-      final lockAndBuildStopwatch = Stopwatch()..start();
-      await _withExclusiveLock(lockFile, () async {
-        if (await _validLibrary(cachedLibrary, cachedDigest)) {
-          logger.info(
-            'Build completed by another process while waiting for the lock',
-          );
-          return;
-        }
-        await _buildIntoCache(
-          input: input,
-          output: output,
-          defines: defines,
-          cacheDir: cacheDir,
-          cachedLibrary: cachedLibrary,
-          cachedDigest: cachedDigest,
-          libraryFileName: libraryFileName,
-          logger: logger,
+  final cacheHit = await _validLibrary(cachedLibrary, cachedDigest);
+  if (!cacheHit) {
+    final lockAndBuildStopwatch = Stopwatch()..start();
+    await _withExclusiveLock(lockFile, () async {
+      if (await _validLibrary(cachedLibrary, cachedDigest)) {
+        logger.info(
+          'Build completed by another process while waiting for the lock',
         );
-      }, logger: logger);
-
-      if (!await _validLibrary(cachedLibrary, cachedDigest)) {
-        throw StateError(
-          'webcrypto cache publication failed for ${code.targetOS.name}/'
-          '${code.targetArchitecture.name}: ${cachedLibrary.path}',
-        );
+        return;
       }
-      logger.info(
-        'Cache miss resolved in '
-        '${_formatDuration(lockAndBuildStopwatch.elapsed)}',
+      await _buildIntoCache(
+        input: input,
+        output: output,
+        defines: defines,
+        cacheDir: cacheDir,
+        cachedLibrary: cachedLibrary,
+        cachedDigest: cachedDigest,
+        libraryFileName: libraryFileName,
+        logger: logger,
+      );
+    }, logger: logger);
+
+    if (!await _validLibrary(cachedLibrary, cachedDigest)) {
+      throw StateError(
+        'webcrypto cache publication failed for ${code.targetOS.name}/'
+        '${code.targetArchitecture.name}: ${cachedLibrary.path}',
       );
     }
-
-    final publishStopwatch = Stopwatch()..start();
-    final publishedLibrary = await _publish(
-      cachedLibrary,
-      input.outputDirectory,
-      libraryFileName,
-    );
-    output.assets.code.add(
-      CodeAsset(
-        package: input.packageName,
-        name: _assetName,
-        linkMode: DynamicLoadingBundled(),
-        file: publishedLibrary.uri,
-      ),
-    );
     logger.info(
-      cacheHit
-          ? 'Hook completed from cache in '
-                '${_formatDuration(hookStopwatch.elapsed)} '
-                '(publish/register '
-                '${_formatDuration(publishStopwatch.elapsed)})'
-          : 'Hook completed after build in '
-                '${_formatDuration(hookStopwatch.elapsed)} '
-                '(publish/register '
-                '${_formatDuration(publishStopwatch.elapsed)})',
+      'Cache miss resolved in '
+      '${_formatDuration(lockAndBuildStopwatch.elapsed)}',
     );
-  }).whenComplete(hookLog.flush);
+  }
+
+  final publishStopwatch = Stopwatch()..start();
+  final publishedLibrary = await _publish(
+    cachedLibrary,
+    input.outputDirectory,
+    libraryFileName,
+  );
+  output.assets.code.add(
+    CodeAsset(
+      package: input.packageName,
+      name: _assetName,
+      linkMode: DynamicLoadingBundled(),
+      file: publishedLibrary.uri,
+    ),
+  );
+  logger.info(
+    cacheHit
+        ? 'Published the cached build '
+              '(${_formatDuration(publishStopwatch.elapsed)})'
+        : 'Published the new build '
+              '(${_formatDuration(publishStopwatch.elapsed)})',
+  );
 }
 
 /// Collects logger records so hooks_runner receives one newline-normalized
@@ -270,71 +278,12 @@ String _libraryFileName(OS os) => switch (os) {
   _ => throw UnsupportedError('package:webcrypto does not support ${os.name}.'),
 };
 
-final class _NativeInput {
-  const _NativeInput(this.relativePath, this.uri);
-
-  final String relativePath;
-  final Uri uri;
-}
-
-Future<List<_NativeInput>> _collectNativeInputs(Uri packageRoot) async {
-  final packagePath = Directory.fromUri(packageRoot).path;
-  final roots = [
-    packageRoot.resolve('src/'),
-    packageRoot.resolve('third_party/boringssl/'),
-    packageRoot.resolve('hook/'),
-  ];
-  final inputs = <_NativeInput>[
-    _NativeInput('pubspec.yaml', packageRoot.resolve('pubspec.yaml')),
-  ];
-
-  for (final root in roots) {
-    final directory = Directory.fromUri(root);
-    if (!await directory.exists()) {
-      throw StateError('Required webcrypto native input is missing: $root');
-    }
-    await for (final entity in directory.list(
-      recursive: true,
-      followLinks: false,
-    )) {
-      if (entity is! File) continue;
-      final relative = p.relative(entity.path, from: packagePath);
-      if (p
-          .split(relative)
-          .any((part) => part == 'build' || part == '.dart_tool')) {
-        continue;
-      }
-      if (_isNativeInput(entity.path)) {
-        inputs.add(_NativeInput(relative, entity.uri));
-      }
-    }
-  }
-
-  inputs.sort((a, b) => a.relativePath.compareTo(b.relativePath));
-  return inputs;
-}
-
-bool _isNativeInput(String path) {
-  final extension = p.extension(path).toLowerCase();
-  return const {
-        '.c',
-        '.cc',
-        '.cpp',
-        '.h',
-        '.inc',
-        '.s',
-        '.asm',
-        '.cmake',
-        '.dart',
-        '.yaml',
-      }.contains(extension) ||
-      p.basename(path) == 'CMakeLists.txt';
-}
-
+/// The key of the local build cache (ADR 005 D4): the source key of the
+/// package and the host toolchain.
 Future<String> _computeBuildKey({
   required CodeConfig code,
   required Map<String, String> defines,
-  required List<_NativeInput> inputs,
+  required String sourceKey,
 }) async {
   final bytes = BytesBuilder(copy: false);
 
@@ -344,6 +293,7 @@ Future<String> _computeBuildKey({
   }
 
   addText(_cacheSchema);
+  addText('source=$sourceKey');
   addText('os=${code.targetOS.name}');
   addText('arch=${code.targetArchitecture.name}');
   addText('link=${code.linkModePreference}');
@@ -379,18 +329,6 @@ Future<String> _computeBuildKey({
       in defines.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
     addText('define:${define.key}=${define.value}');
   }
-  for (final input in inputs) {
-    addText('file:${input.relativePath}');
-    final file = File.fromUri(input.uri);
-    if (!await file.exists()) {
-      throw StateError('Native build input disappeared: ${input.uri}');
-    }
-    await for (final chunk in file.openRead()) {
-      bytes.add(chunk);
-    }
-    bytes.addByte(0);
-  }
-
   return sha256.convert(bytes.takeBytes()).toString();
 }
 

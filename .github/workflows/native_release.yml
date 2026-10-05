@@ -1,0 +1,188 @@
+# Builds the native library for every target and publishes the files as a
+# GitHub release (fllama ADR 005 D5, D6, D8). Start it with
+#   git push -f origin HEAD:native-release       (release)
+#   git push -f origin HEAD:native-release-dry   (build only, no upload)
+# or with workflow_dispatch. On success it pushes the branch
+# native-manifest/<tag> with native_artifacts/prebuilt.json. Merge that
+# branch to use the release.
+name: native release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build only, upload nothing.
+        type: boolean
+        default: false
+  push:
+    branches: [native-release, native-release-dry]
+
+concurrency:
+  group: native-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DART_VERSION: 3.13.1
+  NDK_VERSION: 28.2.13676358
+  NASM_VERSION: 2.16.03
+  NASM_SHA256: 3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { target: windows-x64, runner: windows-2022 }
+          - { target: windows-arm64, runner: windows-11-arm }
+          - { target: linux-x64, runner: ubuntu-22.04 }
+          - { target: linux-arm64, runner: ubuntu-22.04-arm }
+          - { target: macos-arm64, runner: macos-15 }
+          - { target: macos-x64, runner: macos-15 }
+          - { target: ios-arm64-iphoneos, runner: macos-15 }
+          - { target: ios-arm64-iphonesimulator, runner: macos-15 }
+          - { target: ios-x64-iphonesimulator, runner: macos-15 }
+          - { target: android-arm, runner: ubuntu-22.04 }
+          - { target: android-arm64, runner: ubuntu-22.04 }
+          - { target: android-x64, runner: ubuntu-22.04 }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          sdk: ${{ env.DART_VERSION }}
+
+      - name: Install NASM
+        if: runner.os == 'Windows'
+        run: |
+          curl -sSfLo nasm.zip "https://www.nasm.us/pub/nasm/releasebuilds/$NASM_VERSION/win64/nasm-$NASM_VERSION-win64.zip"
+          echo "$NASM_SHA256  nasm.zip" | sha256sum -c -
+          unzip -q nasm.zip -d "$RUNNER_TEMP"
+          rm nasm.zip
+          echo "$RUNNER_TEMP/nasm-$NASM_VERSION" >> "$GITHUB_PATH"
+
+      - name: Install the NDK
+        if: startsWith(matrix.target, 'android-')
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
+
+      - name: Describe the toolchain
+        id: toolchain
+        run: |
+          case "${{ matrix.target }}" in
+            android-*) t="Android NDK $NDK_VERSION" ;;
+            windows-*)
+              vs="$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products '*' -property catalog_productDisplayVersion || true)"
+              t="MSVC, Visual Studio ${vs:-unknown}, NASM $NASM_VERSION" ;;
+            macos-*|ios-*) t="$(xcodebuild -version | head -1)" ;;
+            linux-*) t="$(gcc --version | head -1)" ;;
+          esac
+          echo "Toolchain: $t"
+          echo "value=$t" >> "$GITHUB_OUTPUT"
+
+      - run: dart pub get
+
+      - name: Source key
+        run: |
+          mkdir -p key
+          dart run native_prebuilt:key --list > "key/${{ matrix.target }}.txt"
+          tail -1 "key/${{ matrix.target }}.txt"
+
+      - name: Build
+        env:
+          TOOLCHAIN: ${{ steps.toolchain.outputs.value }}
+        run: |
+          defines=()
+          if [[ "${{ matrix.target }}" == android-* ]]; then
+            defines+=(--define "android={\"android_home\":\"$ANDROID_HOME\",\"ndk_version\":\"$NDK_VERSION\"}")
+          fi
+          dart run native_prebuilt:build \
+            --target "${{ matrix.target }}" \
+            --out "out/${{ matrix.target }}" \
+            --runner "${{ matrix.runner }}" \
+            --toolchain "$TOOLCHAIN" \
+            "${defines[@]}"
+          cat "out/${{ matrix.target }}/target.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-${{ matrix.target }}
+          path: |
+            out/
+            key/
+          if-no-files-found: error
+          retention-days: 90
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      DRY_RUN: ${{ github.ref_name == 'native-release-dry' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          sdk: ${{ env.DART_VERSION }}
+      - run: dart pub get
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: native-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Compare the source keys of all runners (I2)
+        run: |
+          dart run native_prebuilt:key --list > local-key.txt
+          status=0
+          for f in artifacts/key/*.txt; do
+            if ! diff -u local-key.txt "$f"; then
+              echo "::error::The source key on $(basename "$f" .txt) differs."
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--staging staging)
+          if [[ "$DRY_RUN" == true ]]; then args+=(--dry-run); fi
+          dart run native_prebuilt:release "${args[@]}" artifacts/out
+          cat native_artifacts/prebuilt.json
+
+      - name: Push the manifest branch
+        if: env.DRY_RUN != 'true'
+        run: |
+          tag="native-$(dart run native_prebuilt:key | tail -1 | cut -c1-16)"
+          branch="native-manifest/$tag"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add native_artifacts/prebuilt.json
+          git commit -m "native: prebuilt files of release $tag"
+          git push origin "$branch"
+          {
+            echo "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"
+            echo
+            echo "Merge branch \`$branch\` to use it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prebuilt-manifest
+          path: native_artifacts/prebuilt.json
