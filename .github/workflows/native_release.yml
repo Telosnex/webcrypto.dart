@@ -85,8 +85,8 @@ jobs:
             windows-*)
               vs="$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products '*' -property catalog_productDisplayVersion || true)"
               t="MSVC, Visual Studio ${vs:-unknown}, NASM $NASM_VERSION" ;;
-            macos-*|ios-*) t="$(xcodebuild -version | head -1)" ;;
-            linux-*) t="$(gcc --version | head -1)" ;;
+            macos-*|ios-*) t="$(xcodebuild -version | sed -n 1p)" ;;
+            linux-*) t="$(gcc --version | sed -n 1p)" ;;
           esac
           echo "Toolchain: $t"
           echo "value=$t" >> "$GITHUB_OUTPUT"
