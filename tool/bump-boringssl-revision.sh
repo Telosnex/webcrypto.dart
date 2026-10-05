@@ -208,7 +208,8 @@ def classify_asm(path):
     if normalized == "crypto/hrss/asm/poly_rq_mul.S":
         return "linux_x86_64"
     if normalized.startswith("third_party/fiat/asm/"):
-        return "linux_x86_64"
+        # Guarded by __APPLE__ || __ELF__, so both platforms need them.
+        return ("apple_x86_64", "linux_x86_64")
 
     return None
 
@@ -237,8 +238,10 @@ for file in (
     + test_support.get("nasm", [])
 ):
     key = classify_asm(file)
-    if key is not None:
-        asm_outputs[key].append(file)
+    if key is None:
+        continue
+    for k in key if isinstance(key, tuple) else (key,):
+        asm_outputs[k].append(file)
 
 payload = {
     "crypto_sources": sorted(bcm.get("srcs", []) + crypto.get("srcs", [])),
