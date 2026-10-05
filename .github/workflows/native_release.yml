@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - { target: windows-x64, runner: windows-2022 }
@@ -74,7 +74,7 @@ jobs:
       - name: Install the NDK
         if: startsWith(matrix.target, 'android-')
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          { yes || true; } | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
           test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
 
       - name: Describe the toolchain
