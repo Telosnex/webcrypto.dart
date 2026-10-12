@@ -278,8 +278,8 @@ String _libraryFileName(OS os) => switch (os) {
   _ => throw UnsupportedError('package:webcrypto does not support ${os.name}.'),
 };
 
-/// The key of the local build cache (ADR 005 D4): the source key of the
-/// package and the host toolchain.
+/// The key of the local build cache (native_prebuilt ADR 001 D4): the source
+/// key of the package and the host toolchain.
 Future<String> _computeBuildKey({
   required CodeConfig code,
   required Map<String, String> defines,
