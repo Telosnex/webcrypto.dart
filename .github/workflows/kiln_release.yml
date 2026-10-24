@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   kiln-release:
-    uses: Telosnex/telosnex_ci_tools/.github/workflows/kiln_release.yml@71385c9e6410a0b9fdfd2d2a17f0fcc03fe592ee # v0.1.1
+    uses: Telosnex/telosnex_ci_tools/.github/workflows/kiln_release.yml@0e3d782cce29ab6f9fdb2fa6d796bcb365882407 # v0.1.2
     permissions:
       contents: write
     with:
