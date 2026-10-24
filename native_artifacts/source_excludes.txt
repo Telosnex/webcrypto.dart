@@ -1,4 +1,3 @@
-# Files that the native build does not read (native_prebuilt ADR 001 D3).
-doc/
+# Files that the native build does not read (kiln ADR 001 D3).
 tool/
 analysis_options.yaml

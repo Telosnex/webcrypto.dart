@@ -10,7 +10,7 @@
 /// Asset on every supported native target.
 ///
 /// Web builds do not request code assets, so this hook intentionally does
-/// nothing for them. With package:native_prebuilt, a native build downloads
+/// nothing for them. With package:kiln, a native build downloads
 /// the library from a release when native_artifacts/prebuilt.json matches
 /// the sources (user define `native_build`: auto, download or source).
 /// Otherwise it builds from source into a content-addressed, process-locked
@@ -25,7 +25,7 @@ import 'package:code_assets/code_assets.dart';
 import 'package:crypto/crypto.dart';
 import 'package:hooks/hooks.dart';
 import 'package:logging/logging.dart';
-import 'package:native_prebuilt/native_prebuilt.dart';
+import 'package:kiln/kiln.dart';
 import 'package:native_toolchain_cmake/native_toolchain_cmake.dart';
 import 'package:path/path.dart' as p;
 
@@ -45,7 +45,7 @@ void main(List<String> args) async {
       ..level = Level.ALL
       ..onRecord.listen((record) => hookLog.add(record.message));
 
-    await NativePrebuilt(input: input, output: output, log: logger.info).run((
+    await Kiln(input: input, output: output, log: logger.info).run((
       source,
     ) async {
       await _buildFromSource(
@@ -278,7 +278,7 @@ String _libraryFileName(OS os) => switch (os) {
   _ => throw UnsupportedError('package:webcrypto does not support ${os.name}.'),
 };
 
-/// The key of the local build cache (native_prebuilt ADR 001 D4): the source
+/// The key of the local build cache (kiln ADR 001 D4): the source
 /// key of the package and the host toolchain.
 Future<String> _computeBuildKey({
   required CodeConfig code,
