@@ -1,0 +1,38 @@
+# Builds the native library for every target and publishes the files as a
+# GitHub release. Telosnex/telosnex_ci_tools has the jobs;
+# tool/kiln/prepare.dart installs NASM for the Windows builds.
+#
+# Start it with
+#   git push -f origin HEAD:kiln-release       (release)
+#   git push -f origin HEAD:kiln-release-dry   (build only, no upload)
+# or with workflow_dispatch. On success it pushes the branch
+# kiln-manifest/<tag>. Merge that branch to use the release.
+name: Kiln release
+run-name: Kiln release / ${{ (github.ref_name == 'kiln-release-dry' || inputs.dry_run) && 'build only' || 'publish' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build only, upload nothing.
+        type: boolean
+        default: false
+  push:
+    branches: [kiln-release, kiln-release-dry]
+
+permissions:
+  contents: read
+
+jobs:
+  kiln-release:
+    uses: Telosnex/telosnex_ci_tools/.github/workflows/kiln_release.yml@71385c9e6410a0b9fdfd2d2a17f0fcc03fe592ee # v0.1.1
+    permissions:
+      contents: write
+    with:
+      dry-run: ${{ inputs.dry_run == true }}
+      # The 10 default targets, and the Intel macOS and iOS simulator.
+      targets: >-
+        ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64",
+        "macos-arm64", "macos-x64", "ios-arm64-iphoneos",
+        "ios-arm64-iphonesimulator", "ios-x64-iphonesimulator",
+        "android-arm", "android-arm64", "android-x64"]
