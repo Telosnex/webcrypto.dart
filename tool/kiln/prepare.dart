@@ -21,8 +21,10 @@ Future<void> main() async {
     'https://www.nasm.us/pub/nasm/releasebuilds/$_version/win64/'
         'nasm-$_version-win64.zip',
   ]);
+  // On Windows, sha256sum puts a backslash before the hash of a path with
+  // backslashes.
   final sum = await Process.run('sha256sum', [zip]);
-  if ('${sum.stdout}'.split(' ').first != _sha256) {
+  if (RegExp('[0-9a-f]{64}').firstMatch('${sum.stdout}')?[0] != _sha256) {
     stderr.writeln('NASM: SHA-256 mismatch: ${sum.stdout}');
     exit(1);
   }
