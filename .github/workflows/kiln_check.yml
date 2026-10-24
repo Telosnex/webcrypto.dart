@@ -2,7 +2,7 @@ name: Kiln check
 
 on:
   pull_request:
-    branches: [telosnex_main]
+    branches: [main]
     paths:
       - native_artifacts/prebuilt.json
       - native_artifacts/source_excludes.txt
