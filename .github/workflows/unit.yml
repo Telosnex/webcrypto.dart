@@ -1,0 +1,37 @@
+name: Unit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    # ci/** branches run it too: a new workflow cannot be started by hand
+    # before it is on main.
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-warnings .
+      - run: dart run kiln:check
+      # The VM tests, with Valgrind (test/ffi/valgrind_test.dart).
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind > /dev/null
+      - run: dart test --exclude-tags browser-interop -p vm -r expanded

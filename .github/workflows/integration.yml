@@ -1,0 +1,122 @@
+name: Integration
+
+on:
+  push:
+    branches: [main, 'ci/**']
+  schedule:
+    - cron: '29 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # The VM tests against the released BoringSSL library of each platform,
+  # then the demo app's integration test (Flutter desktop).
+  native:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x64, runner: ubuntu-24.04, device: linux }
+          - { name: Linux ARM64, runner: ubuntu-24.04-arm, device: linux }
+          - { name: macOS ARM64, runner: macos-26, device: macos }
+          - { name: macOS x64, runner: macos-15-intel, device: macos }
+          - { name: Windows x64, runner: windows-2025, device: windows }
+          - { name: Windows ARM64, runner: windows-11-arm, device: windows }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev xvfb > /dev/null
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - run: flutter pub get
+      - run: dart test --exclude-tags browser-interop -p vm -r expanded
+      - name: Demo app integration test
+        working-directory: example/webcrypto_demo_flutter_app
+        env:
+          DEVICE: ${{ matrix.device }}
+        run: |
+          flutter pub get
+          run=(flutter test integration_test/webcrypto_test.dart -d "$DEVICE" --timeout 5m -r expanded)
+          if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
+          "${run[@]}"
+
+  web:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Web Linux x64 Chrome dart2js, runner: ubuntu-24.04, platform: chrome, compiler: dart2js }
+          - { name: Web Linux x64 Chrome dart2wasm, runner: ubuntu-24.04, platform: chrome, compiler: dart2wasm }
+          - { name: Web Linux x64 Firefox dart2js, runner: ubuntu-24.04, platform: firefox, compiler: dart2js }
+          - { name: Web Linux x64 Firefox dart2wasm, runner: ubuntu-24.04, platform: firefox, compiler: dart2wasm }
+          - { name: Web macOS ARM64 Safari dart2js, runner: macos-26, platform: safari, compiler: dart2js }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - run: flutter pub get
+      - if: matrix.platform == 'safari'
+        uses: Telosnex/telosnex_ci_tools/actions/dart-test-safari@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - name: dart test -p ${{ matrix.platform }} -c ${{ matrix.compiler }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          COMPILER: ${{ matrix.compiler }}
+        run: dart test --exclude-tags browser-interop -p "$PLATFORM" -c "$COMPILER" -r expanded
+
+  ios:
+    name: iOS ARM64 simulator
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - run: flutter pub get
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+        with:
+          working-directory: example/webcrypto_demo_flutter_app
+          target: integration_test/webcrypto_test.dart
+          args: --timeout 5m
+
+  android:
+    name: Android x64 emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - run: flutter pub get
+      - uses: Telosnex/telosnex_ci_tools/actions/android-emulator@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+        id: emulator
+        with:
+          api-level: '36'
+      - name: Demo app integration test
+        working-directory: example/webcrypto_demo_flutter_app
+        env:
+          SERIAL: ${{ steps.emulator.outputs.serial }}
+        run: |
+          flutter pub get
+          flutter test integration_test/webcrypto_test.dart -d "$SERIAL" --timeout 5m -r expanded
