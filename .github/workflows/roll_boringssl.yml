@@ -28,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
 
       - name: Install system dependencies
         run: |

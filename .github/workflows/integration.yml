@@ -43,7 +43,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev xvfb > /dev/null
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
       - run: flutter pub get
       - run: dart test --exclude-tags browser-interop -p vm -r expanded
       - name: Demo app integration test
@@ -73,9 +73,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
       - run: flutter pub get
-      - uses: Telosnex/telosnex_ci_tools/actions/dart-test-browser@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/dart-test-browser@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
         with:
           platform: ${{ matrix.platform }}
           compiler: ${{ matrix.compiler }}
@@ -89,9 +89,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
       - run: flutter pub get
-      - uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
         with:
           working-directory: example/webcrypto_demo_flutter_app
           target: integration_test/webcrypto_test.dart
@@ -105,9 +105,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
       - run: flutter pub get
-      - uses: Telosnex/telosnex_ci_tools/actions/android-emulator@81f9d8a288f7172d3767a2dfa1b6f57fa8a2689b # main
+      - uses: Telosnex/telosnex_ci_tools/actions/android-emulator@ac661f93e2b65b203d12956ecc215da3b8ddf871 # main
         id: emulator
         with:
           api-level: '36'
