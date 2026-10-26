@@ -33,3 +33,29 @@ T? nullOnFirefox<T>(T value) => detectedRuntime == 'firefox' ? null : value;
 /// This utility helps filter away test cases and features known to not work on
 /// Safari and which has been documented in the API documentation.
 T? nullOnSafari<T>(T value) => detectedRuntime == 'safari' ? null : value;
+
+/// Removes, on Safari, the test cases that generate an RSA key with public
+/// exponent 3; other browsers and the VM keep them.
+///
+/// Safari cannot generate such a key: `generateKey` throws `OperationError`.
+/// WebKit's `CryptoKeyRSA::generatePair` (Source/WebCore/crypto/cocoa/
+/// CryptoKeyRSACocoa.cpp) passes the exponent to CommonCrypto's
+/// `CCRSACryptorGeneratePair` and turns any failure into `OperationError`.
+/// CommonCrypto rejects e = 3, most likely because it follows FIPS 186-4
+/// (B.3.1: e > 2^16), which rules out small exponents after the e = 3 attacks
+/// on careless RSA use (Hastad's broadcast attack, cube roots of unpadded
+/// messages, Bleichenbacher's 2006 signature forgery). CommonCrypto returns
+/// only a status code, so the FIPS reason is inferred, not confirmed. OAEP and
+/// PSS padding prevent those attacks, and Chrome and Firefox generate e = 3.
+///
+/// Safari does import and use e = 3 keys: the cases with keys generated on
+/// Linux or Chrome pass, so only generation is skipped.
+/// `test/crypto_subtle_test.dart` ("generateKeyPair: e3") checks that Safari
+/// still rejects generation.
+List<Map> withoutRsaE3GenerationOnSafari(List<Map> cases) {
+  if (detectedRuntime != 'safari') return cases;
+  return cases.where((c) {
+    final params = c['generateKeyParams'];
+    return !(params is Map && '${params['publicExponent']}' == '3');
+  }).toList();
+}

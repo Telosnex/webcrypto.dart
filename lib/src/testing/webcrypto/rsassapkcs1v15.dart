@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import '../utils/detected_runtime.dart';
 import 'package:webcrypto/webcrypto.dart';
 import '../utils/utils.dart';
 import '../utils/testrunner.dart';
@@ -59,7 +60,7 @@ final runner =
           key.verifyBytes(signature, data),
       verifyStream: (key, signature, data, verifyParams) =>
           key.verifyStream(signature, data),
-      testData: _testData,
+      testData: withoutRsaE3GenerationOnSafari(_testData),
     );
 
 void main() => runner.tests().runTests();

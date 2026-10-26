@@ -54,7 +54,7 @@ final runner = TestRunner.asymmetric<RsaPssPrivateKey, RsaPssPublicKey>(
       key.verifyBytes(signature, data, verifyParams['saltLength']),
   verifyStream: (key, signature, data, verifyParams) =>
       key.verifyStream(signature, data, verifyParams['saltLength']),
-  testData: _testData,
+  testData: withoutRsaE3GenerationOnSafari(_testData),
 );
 
 void main() => runner.tests().runTests();
