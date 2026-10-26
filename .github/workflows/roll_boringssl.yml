@@ -1,4 +1,4 @@
-name: update-boringssl
+name: Roll BoringSSL
 
 on:
   workflow_dispatch:
@@ -21,17 +21,14 @@ concurrency:
 jobs:
   roll:
     name: Roll BoringSSL
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@a9a1bb441373e9ff3801fe91acf7efc80954cbe6 # main
 
       - name: Install system dependencies
         run: |
@@ -72,7 +69,7 @@ jobs:
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: "update-boringssl-${{ steps.roll.outputs.short_revision }}"
           delete-branch: true
