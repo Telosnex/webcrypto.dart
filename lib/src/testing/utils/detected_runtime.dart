@@ -34,6 +34,14 @@ T? nullOnFirefox<T>(T value) => detectedRuntime == 'firefox' ? null : value;
 /// Safari and which has been documented in the API documentation.
 T? nullOnSafari<T>(T value) => detectedRuntime == 'safari' ? null : value;
 
+/// Whether HMAC keys must be a whole number of bytes.
+///
+/// Safari rejects an HMAC `length` that is not a multiple of 8: `importKey`
+/// throws `DataError` and `generateKey` throws `OperationError` (checked in
+/// Safari 26 with lengths 9, 255 and 524289; 16, 256 and 524296 work). Chrome,
+/// Firefox and the VM accept any length.
+bool get hmacLengthMustBeWholeBytes => detectedRuntime == 'safari';
+
 /// Removes, on Safari, the test cases that generate an RSA key with public
 /// exponent 3; other browsers and the VM keep them.
 ///

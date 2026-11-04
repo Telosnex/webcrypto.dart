@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import 'package:webcrypto/webcrypto.dart';
+import '../utils/detected_runtime.dart';
 import '../utils/utils.dart';
 
 void main() => tests().runTests();
@@ -23,6 +24,8 @@ List<({String name, Future<void> Function() test})> tests() {
       tests.add((name: name, test: fn));
 
   test('Hmac: importJsonWebKey applies length like importRawKey', () async {
+    // Safari rejects a 9-bit key in importRawKey and importJsonWebKey alike.
+    if (hmacLengthMustBeWholeBytes) return;
     final keyData = [0xff, 0xe0];
     final jwk = {'kty': 'oct', 'alg': 'HS256', 'k': '_-A'};
 

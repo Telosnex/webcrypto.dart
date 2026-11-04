@@ -14,18 +14,23 @@
 
 import 'package:webcrypto/webcrypto.dart';
 
+import '../utils/detected_runtime.dart';
 import '../utils/utils.dart';
 
 List<({String name, Future<void> Function() test})> tests() => [
   (
     name: 'HMAC generates a key above the random-fill quota',
     test: () async {
-      const length = 65536 * 8 + 1;
+      // Safari only generates whole bytes: test the quota there with 65537
+      // bytes, and the unused bits elsewhere.
+      final length = hmacLengthMustBeWholeBytes ? 65537 * 8 : 65536 * 8 + 1;
       final key = await HmacSecretKey.generateKey(Hash.sha256, length: length);
       final raw = await key.exportRawKey();
 
       check(raw.length == 65537, 'Expected a 65537-byte generated key');
-      check(raw.last & 0x7f == 0, 'Unused bits must be zero');
+      if (!hmacLengthMustBeWholeBytes) {
+        check(raw.last & 0x7f == 0, 'Unused bits must be zero');
+      }
 
       final data = [1, 2, 3];
       final signature = await key.signBytes(data);

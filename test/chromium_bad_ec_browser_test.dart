@@ -79,9 +79,12 @@ void main() {
           reason: 'Chromium vector $index: ${vector['error']}',
         );
       },
-      onPlatform: {14, 16, 17, 19}.contains(index)
-          ? {'firefox': Skip('Firefox accepts this EC key')}
-          : null,
+      onPlatform: {
+        if ({14, 16, 17, 19}.contains(index))
+          'firefox': Skip('Firefox accepts this EC key'),
+        if ({14, 19}.contains(index))
+          'safari': Skip('Safari accepts this EC key'),
+      },
     );
   }
 }

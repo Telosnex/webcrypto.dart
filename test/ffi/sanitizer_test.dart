@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// FFI only, like the rest of test/ffi; 'dart-vm' also matches the sanitizer
+// runtimes (vm-asan, ...).
+@TestOn('dart-vm')
 @Tags(['sanitizer'])
 @Timeout(Duration(minutes: 5))
 library;

@@ -160,6 +160,7 @@ Future<subtle.JSCryptoKey> _importJsonWebKey(
   List<String> usages,
   String expectedType,
 ) {
+  _checkJwkBase64Url(jwk);
   return _handleDomException(() async {
     final jwkObj = subtle.JsonWebKey.fromJson(jwk);
     // TODO: Validate expected 'use' the way we have it in the FFI implementation
@@ -308,6 +309,39 @@ Future<Map<String, Object>> _exportJsonWebKey(
     jwk.use = jwkUse;
     return jwk.toJson();
   });
+}
+
+const _jwkBase64UrlMembers = [
+  'k',
+  'x',
+  'y',
+  'd',
+  'n',
+  'e',
+  'p',
+  'q',
+  'dp',
+  'dq',
+  'qi',
+];
+final _base64UrlNoPadding = RegExp(r'^[A-Za-z0-9_-]*$');
+
+/// Throws [FormatException] if a JWK member that holds bytes is not url-safe
+/// base64 without padding (RFC 7518), as the FFI implementation does.
+///
+/// Chrome and Firefox reject such keys themselves, but Safari accepts padded
+/// values such as `AQ==`.
+void _checkJwkBase64Url(Map<String, dynamic> jwk) {
+  for (final member in _jwkBase64UrlMembers) {
+    final value = jwk[member];
+    if (value is String &&
+        (!_base64UrlNoPadding.hasMatch(value) || value.length % 4 == 1)) {
+      throw FormatException(
+        'JWK property "$member" is not url-safe base64 without padding',
+        value,
+      );
+    }
+  }
 }
 
 /// Adapt `crypto.subtle.generateKey` to Dart types.
