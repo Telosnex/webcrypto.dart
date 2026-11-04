@@ -241,7 +241,7 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
   ) async {
     _checkArguments(counter, length);
     return await _bufferStream(
-      decryptStream(Stream.value(data), counter, length),
+      decryptStream(Stream.value(Uint8List.fromList(data)), counter, length),
     );
   }
 
@@ -252,7 +252,13 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     int length,
   ) {
     _checkArguments(counter, length);
-    return _aesCtrEncryptOrDecrypt(_key, false, data, counter, length);
+    return _aesCtrEncryptOrDecrypt(
+      _key,
+      false,
+      data,
+      Uint8List.fromList(counter),
+      length,
+    );
   }
 
   @override
@@ -263,7 +269,7 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
   ) async {
     _checkArguments(counter, length);
     return await _bufferStream(
-      encryptStream(Stream.value(data), counter, length),
+      encryptStream(Stream.value(Uint8List.fromList(data)), counter, length),
     );
   }
 
@@ -274,7 +280,13 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     int length,
   ) {
     _checkArguments(counter, length);
-    return _aesCtrEncryptOrDecrypt(_key, true, data, counter, length);
+    return _aesCtrEncryptOrDecrypt(
+      _key,
+      true,
+      data,
+      Uint8List.fromList(counter),
+      length,
+    );
   }
 
   @override

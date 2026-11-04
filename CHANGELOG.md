@@ -4,6 +4,10 @@
   to avoid recompiling BoringSSL when the native inputs are unchanged.
 * Preserved the `globalThis` web-worker compatibility fix.
 * Fixed JS interop to enable WebAssembly.
+* Fixed native RSA public-key JWK imports to reject private key material.
+* Upgrade `ffigen` and `hooks` versions.
+* Fixed native HKDF output-length validation to reject oversized requests
+  before allocating memory.
 * Fixed Windows arm64 builds: disable MSVC warning C4702 (unreachable code),
   matching upstream BoringSSL.
 

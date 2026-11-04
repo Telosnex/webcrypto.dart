@@ -40,11 +40,43 @@ Future<HmacSecretKeyImpl> hmacSecretKey_importRawKey(
   );
 }
 
+Uint8List _jwkDecodeBase64UrlNoPadding(String unpadded, String prop) {
+  try {
+    final padded = unpadded.padRight(
+      unpadded.length + ((4 - (unpadded.length % 4)) % 4),
+      '=',
+    );
+    return base64Url.decode(padded);
+  } on FormatException {
+    throw FormatException(
+      'JWK property "$prop" is not url-safe base64 without padding',
+      unpadded,
+    );
+  }
+}
+
+void _checkHmacLength(List<int> keyData, int length) {
+  if (length < 0 ||
+      length > keyData.length * 8 ||
+      length <= (keyData.length - 1) * 8) {
+    throw const FormatException(
+      'JWK property "k" does not match expected length',
+    );
+  }
+}
+
 Future<HmacSecretKeyImpl> hmacSecretKey_importJsonWebKey(
   Map<String, dynamic> jwk,
   HashImpl hash, {
   int? length,
 }) async {
+  if (length != null && jwk['k'] is String) {
+    _checkHmacLength(
+      _jwkDecodeBase64UrlNoPadding(jwk['k'] as String, 'k'),
+      length,
+    );
+  }
+
   return _HmacSecretKeyImpl(
     await _importJsonWebKey(
       jwk,
@@ -132,13 +164,21 @@ final class _HmacSecretKeyImpl implements HmacSecretKeyImpl {
   }
 
   @override
-  Future<bool> verifyStream(List<int> signature, Stream<List<int>> data) async {
+  Future<bool> verifyStream(List<int> signature, Stream<List<int>> data) {
+    final signatureSnapshot = List<int>.of(signature, growable: false);
+    return _verifySignatureStream(signatureSnapshot, data);
+  }
+
+  Future<bool> _verifySignatureStream(
+    List<int> signature,
+    Stream<List<int>> data,
+  ) async {
     return await verifyBytes(signature, await _bufferStream(data));
   }
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'sig');
   }
 
   @override

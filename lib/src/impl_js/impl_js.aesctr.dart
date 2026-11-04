@@ -18,6 +18,12 @@ part of 'impl_js.dart';
 
 const _aesCtrAlgorithm = subtle.Algorithm(name: 'AES-CTR');
 
+void _checkAesCtrLength(int length) {
+  if (length <= 0 || 128 < length) {
+    throw ArgumentError.value(length, 'length', 'must be between 1 and 128');
+  }
+}
+
 Future<AesCtrSecretKeyImpl> aesCtr_importRawKey(List<int> keyData) async {
   return _AesCtrSecretKeyImpl(
     await _importKey(
@@ -87,6 +93,7 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     List<int> counter,
     int length,
   ) async {
+    _checkAesCtrLength(length);
     return await _decrypt(
       _aesCtrAlgorithm.update(
         counter: Uint8List.fromList(counter),
@@ -102,8 +109,8 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     Stream<List<int>> data,
     List<int> counter,
     int length,
-  ) async* {
-    yield await decryptBytes(await _bufferStream(data), counter, length);
+  ) {
+    return _cryptStream(data, Uint8List.fromList(counter), length, false);
   }
 
   @override
@@ -112,6 +119,7 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     List<int> counter,
     int length,
   ) async {
+    _checkAesCtrLength(length);
     return await _encrypt(
       _aesCtrAlgorithm.update(
         counter: Uint8List.fromList(counter),
@@ -127,13 +135,25 @@ final class _AesCtrSecretKeyImpl implements AesCtrSecretKeyImpl {
     Stream<List<int>> data,
     List<int> counter,
     int length,
+  ) {
+    return _cryptStream(data, Uint8List.fromList(counter), length, true);
+  }
+
+  Stream<Uint8List> _cryptStream(
+    Stream<List<int>> data,
+    Uint8List counter,
+    int length,
+    bool encrypt,
   ) async* {
-    yield await encryptBytes(await _bufferStream(data), counter, length);
+    final bytes = await _bufferStream(data);
+    yield await (encrypt
+        ? encryptBytes(bytes, counter, length)
+        : decryptBytes(bytes, counter, length));
   }
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'enc');
   }
 
   @override

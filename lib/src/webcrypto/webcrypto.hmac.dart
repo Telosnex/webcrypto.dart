@@ -53,6 +53,24 @@ final class HmacSecretKey {
 
   HmacSecretKey._(this._impl); // keep the constructor private.
 
+  static void _checkLength(int length, int keyDataLength) {
+    if (length > keyDataLength * 8) {
+      throw ArgumentError.value(
+        length,
+        'length',
+        'must be less than number of bits in keyData',
+      );
+    }
+    if (length <= (keyDataLength - 1) * 8) {
+      throw ArgumentError.value(
+        length,
+        'length',
+        'must be greater than number of bits in keyData - 8, you can attain '
+            'the same effect by removing bytes from keyData',
+      );
+    }
+  }
+
   /// Import [HmacSecretKey] from raw [keyData].
   ///
   /// Creates an [HmacSecretKey] using [keyData] as secret key, and running
@@ -73,20 +91,8 @@ final class HmacSecretKey {
   }) async {
     // These limitations are given in Web Cryptography Spec:
     // https://www.w3.org/TR/WebCryptoAPI/#hmac-operations
-    if (length != null && length > keyData.length * 8) {
-      throw ArgumentError.value(
-        length,
-        'length',
-        'must be less than number of bits in keyData',
-      );
-    }
-    if (length != null && length <= (keyData.length - 1) * 8) {
-      throw ArgumentError.value(
-        length,
-        'length',
-        'must be greater than number of bits in keyData - 8, you can attain '
-            'the same effect by removing bytes from keyData',
-      );
+    if (length != null) {
+      _checkLength(length, keyData.length);
     }
 
     final impl = await webCryptImpl.hmacSecretKey.importRawKey(
@@ -153,26 +159,10 @@ final class HmacSecretKey {
     Hash hash, {
     int? length,
   }) async {
-    /*
-    TODO: Validate these in the native implememtation
-    // These limitations are given in Web Cryptography Spec:
-    // https://www.w3.org/TR/WebCryptoAPI/#hmac-operations
-    if (length != null && length > keyData.length * 8) {
-      throw ArgumentError.value(
-          length, 'length', 'must be less than number of bits in keyData');
-    }
-    if (length != null && length <= (keyData.length - 1) * 8) {
-      throw ArgumentError.value(
-        length,
-        'length',
-        'must be greater than number of bits in keyData - 8, you can attain '
-            'the same effect by removing bytes from keyData',
-      );
-    }*/
-
     final impl = await webCryptImpl.hmacSecretKey.importJsonWebKey(
       jwk,
       hash._impl,
+      length: length,
     );
 
     return HmacSecretKey._(impl);
@@ -190,12 +180,15 @@ final class HmacSecretKey {
   ///
   /// Future<void> main() async {
   ///   // Generate a new random HMAC secret key.
-  ///   final key = await HmacSecretKey.generate(Hash.sha256);
+  ///   final key = await HmacSecretKey.generateKey(Hash.sha256);
   /// }
   /// ```
   static Future<HmacSecretKey> generateKey(Hash hash, {int? length}) async {
     if (length != null && length <= 0) {
       throw ArgumentError.value(length, 'length', 'must be positive');
+    }
+    if (length != null && length > 0xffffffff) {
+      throw ArgumentError.value(length, 'length', 'too large');
     }
 
     final impl = await webCryptImpl.hmacSecretKey.generateKey(
@@ -355,7 +348,7 @@ final class HmacSecretKey {
   ///
   /// Future<void> main() async {
   ///   // Generate a new random HMAC secret key.
-  ///   final key = await HmacSecretKey.generate(Hash.sha256);
+  ///   final key = await HmacSecretKey.generateKey(Hash.sha256);
   ///
   ///   // Extract the secret key.
   ///   final secretBytes = await key.exportRawKey();
@@ -380,7 +373,7 @@ final class HmacSecretKey {
   ///
   /// Future<void> main() async {
   ///   // Generate a new random HMAC secret key.
-  ///   final key = await HmacSecretKey.generate(Hash.sha256);
+  ///   final key = await HmacSecretKey.generateKey(Hash.sha256);
   ///
   ///   // Export the secret key.
   ///   final jwk = await key.exportJsonWebKey();

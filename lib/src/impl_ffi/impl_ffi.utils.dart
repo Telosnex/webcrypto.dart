@@ -125,6 +125,20 @@ void _checkData(bool condition, {String? message, String? fallback}) {
 void _checkDataIsOne(int retval, {String? message, String? fallback}) =>
     _checkData(retval == 1, message: message, fallback: fallback);
 
+/// Validate that [value] fits Web IDL's `unsigned long` type.
+void _checkUnsignedLong(int value, String name) {
+  if (value < 0 || value > 0xffffffff) {
+    throw ArgumentError.value(value, name, 'must be between 0 and 4294967295');
+  }
+}
+
+/// Validate that [value] can be passed to a signed 32-bit native parameter.
+void _checkInt32(int value, String name) {
+  if (value < -0x80000000 || value > 0x7fffffff) {
+    throw ArgumentError.value(value, name, 'must fit a signed 32-bit integer');
+  }
+}
+
 /// Extract latest error on this thread as [String] and clear the error queue
 /// for this thread.
 ///
@@ -410,6 +424,7 @@ Future<bool> _verifyStream(
   Stream<List<int>> data, {
   void Function(ffi.Pointer<EVP_PKEY_CTX> ctx)? config,
 }) {
+  final signatureSnapshot = Uint8List.fromList(signature);
   return _Scope.async((scope) async {
     // Create and initialize verification context
     final ctx = scope.create(ssl.EVP_MD_CTX_new, ssl.EVP_MD_CTX_free);
@@ -429,8 +444,8 @@ Future<bool> _verifyStream(
     // Verify signature
     final result = ssl.EVP_DigestVerifyFinal(
       ctx,
-      scope.dataAsPointer(signature),
-      signature.length,
+      scope.dataAsPointer(signatureSnapshot),
+      signatureSnapshot.length,
     );
     if (result != 1) {
       // TODO: We should always clear errors, when returning from any
@@ -486,7 +501,11 @@ Uint8List _jwkDecodeBase64UrlNoPadding(String unpadded, String prop) {
       unpadded.length + ((4 - (unpadded.length % 4)) % 4),
       '=',
     );
-    return base64Url.decode(padded);
+    final decoded = base64Url.decode(padded);
+    if (_jwkEncodeBase64UrlNoPadding(decoded) != unpadded) {
+      throw const FormatException();
+    }
+    return decoded;
   } on FormatException {
     throw FormatException(
       'JWK property "$prop" is not url-safe base64 without padding',

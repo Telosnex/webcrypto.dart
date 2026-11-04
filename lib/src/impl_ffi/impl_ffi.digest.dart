@@ -38,7 +38,7 @@ abstract class _HashImpl implements HashImpl {
 
   @override
   Future<Uint8List> digestBytes(List<int> data) =>
-      digestStream(Stream.value(data));
+      digestStream(Stream.value(Uint8List.fromList(data)));
 
   @override
   Future<Uint8List> digestStream(Stream<List<int>> data) {
@@ -74,7 +74,7 @@ abstract class _HashImpl implements HashImpl {
 
   /// Algorithm (`alg` for JWK) when this hash algorithm is used in RSA-OAEP.
   ///
-  /// For SHA-1, it returns 'RSA-OAEP-1'.
+  /// For SHA-1, it returns 'RSA-OAEP'.
   /// For SHA-256, it returns 'RSA-OAEP-256'.
   /// For SHA-384, it returns 'RSA-OAEP-384'.
   /// For SHA-512, it returns 'RSA-OAEP-512'.
@@ -113,7 +113,7 @@ final class _Sha1 extends _HashImpl {
   String get hmacJwkAlg => 'HS1';
 
   @override
-  String get rsaOaepJwkAlg => 'RSA-OAEP-1';
+  String get rsaOaepJwkAlg => 'RSA-OAEP';
 
   @override
   String get rsaPssJwkAlg => 'PS1';

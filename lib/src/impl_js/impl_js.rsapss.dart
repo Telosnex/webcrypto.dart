@@ -174,7 +174,7 @@ final class _RsaPssPrivateKeyImpl implements RsaPssPrivateKeyImpl {
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'sig');
   }
 
   @override
@@ -240,12 +240,17 @@ final class _RsaPssPublicKeyImpl implements RsaPssPublicKeyImpl {
     Stream<List<int>> data,
     int saltLength,
   ) async {
-    return await verifyBytes(signature, await _bufferStream(data), saltLength);
+    final signatureSnapshot = Uint8List.fromList(signature);
+    return await verifyBytes(
+      signatureSnapshot,
+      await _bufferStream(data),
+      saltLength,
+    );
   }
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'sig');
   }
 
   @override

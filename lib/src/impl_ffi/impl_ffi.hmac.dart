@@ -37,9 +37,19 @@ Future<HmacSecretKeyImpl> hmacSecretKey_importRawKey(
   HashImpl hash, {
   int? length,
 }) async {
+  _checkData(keyData.isNotEmpty, message: 'HMAC key data must not be empty');
   return _HmacSecretKeyImpl(
     _asUint8ListZeroedToBitLength(keyData, length),
     _HashImpl.fromHash(hash),
+  );
+}
+
+void _checkHmacLength(List<int> keyData, int length) {
+  _checkData(
+    length >= 0 &&
+        length <= keyData.length * 8 &&
+        length > (keyData.length - 1) * 8,
+    message: 'JWK property "k" does not match expected length',
   );
 }
 
@@ -65,6 +75,9 @@ Future<HmacSecretKeyImpl> hmacSecretKey_importJsonWebKey(
   );
 
   final keyData = _jwkDecodeBase64UrlNoPadding(k.k!, 'k');
+  if (length != null) {
+    _checkHmacLength(keyData, length);
+  }
 
   return hmacSecretKey_importRawKey(keyData, hash, length: length);
 }
@@ -76,7 +89,16 @@ Future<HmacSecretKeyImpl> hmacSecretKey_generateKey(
   final h = _HashImpl.fromHash(hash);
   length ??= ssl.EVP_MD_size(h._md) * 8;
   final keyData = Uint8List((length / 8).ceil());
-  fillRandomBytes(keyData);
+  const maxRandomBytes = 65536;
+  for (var offset = 0; offset < keyData.length; offset += maxRandomBytes) {
+    fillRandomBytes(
+      Uint8List.sublistView(
+        keyData,
+        offset,
+        math.min(offset + maxRandomBytes, keyData.length),
+      ),
+    );
+  }
 
   return _HmacSecretKeyImpl(_asUint8ListZeroedToBitLength(keyData, length), h);
 }
@@ -120,7 +142,8 @@ final class _HmacSecretKeyImpl implements HmacSecretKeyImpl {
   }
 
   @override
-  Future<Uint8List> signBytes(List<int> data) => signStream(Stream.value(data));
+  Future<Uint8List> signBytes(List<int> data) =>
+      signStream(Stream.value(Uint8List.fromList(data)));
 
   @override
   Future<Uint8List> signStream(Stream<List<int>> data) {
@@ -153,7 +176,18 @@ final class _HmacSecretKeyImpl implements HmacSecretKeyImpl {
       verifyStream(signature, Stream.value(data));
 
   @override
-  Future<bool> verifyStream(List<int> signature, Stream<List<int>> data) async {
+  Future<bool> verifyStream(List<int> signature, Stream<List<int>> data) {
+    // Snapshot caller-owned input before any asynchronous work. This matches
+    // Web Crypto semantics and keeps verification independent of mutations to
+    // the original list while the data stream is being consumed.
+    final signatureSnapshot = List<int>.of(signature, growable: false);
+    return _verifySignatureStream(signatureSnapshot, data);
+  }
+
+  Future<bool> _verifySignatureStream(
+    List<int> signature,
+    Stream<List<int>> data,
+  ) async {
     final other = await signStream(data);
     if (signature.length != other.length) {
       return false;

@@ -14,6 +14,17 @@
 
 part of 'webcrypto.dart';
 
+Map<String, dynamic> _normalizeLegacyRsaOaepJwkAlg(
+  Map<String, dynamic> jwk,
+  Hash hash,
+) {
+  // Preserve imports of JWKs exported by older FFI releases.
+  if (identical(hash, Hash.sha1) && jwk['alg'] == 'RSA-OAEP-1') {
+    return {...jwk, 'alg': 'RSA-OAEP'};
+  }
+  return jwk;
+}
+
 /// RSAES-OAEP private key for decryption of messages.
 ///
 /// An [RsaOaepPrivateKey] instance holds a private RSA key for decrypting
@@ -63,8 +74,9 @@ part of 'webcrypto.dart';
 /// {@endtemplate}
 ///
 /// {@template RSAES-OAEP-message-size-limit}
-/// The size of the message to be encrypted is limited to
-/// `message.length <= (modulusLength - 2 * hashLength - 2) / 8`.
+/// The maximum message size in bytes is
+/// `modulusByteLength - 2 * hashByteLength - 2`, where the modulus and hash
+/// output lengths are measured in bytes.
 /// Thus, [RsaOaepPublicKey.encryptBytes] is usually only used to encrypt the
 /// key for symmetric cipher like [AesCbcSecretKey], [AesCtrSecretKey] or
 /// [AesGcmSecretKey], after which the symmetric cipher can be used
@@ -92,30 +104,7 @@ final class RsaOaepPrivateKey {
   /// {@macro RSA-importKey:throws-FormatException-if-KeyData}
   ///
   /// **Example**
-  /// ```dart
-  /// import 'package:webcrypto/webcrypto.dart';
-  /// import 'package:pem/pem.dart';
-  ///
-  /// Future<void> main() async {
-  ///   // Read key data from PEM encoded block. This will remove the
-  ///   // '----BEGIN...' padding, decode base64 and return encoded bytes.
-  ///   List<int> keyData = PemCodec(PemLabel.privateKey).decode("""
-  ///     -----BEGIN PRIVATE KEY-----
-  ///     MIGEAgEAMBAGByqG...
-  ///     -----END PRIVATE KEY-----
-  ///   """);
-  ///
-  ///   // Import private key from binary PEM decoded data.
-  ///   final privateKey = await RsaOaepPrivateKey.importPkcs8Key(
-  ///     keyData,
-  ///     Hash.sha256,
-  ///   );
-  ///
-  ///   // Export the key again (print it in same format as it was given).
-  ///   List<int> rawKeyData = await privateKey.exportPkcs8Key();
-  ///   print(PemCodec(PemLabel.privateKey).encode(rawKeyData));
-  /// }
-  /// ```
+  /// {@example /example/webcrypto/rsa_oaep/import_pkcs8_key.dart#example}
   ///
   /// [1]: https://www.rfc-editor.org/rfc/rfc5208
   static Future<RsaOaepPrivateKey> importPkcs8Key(
@@ -175,8 +164,9 @@ final class RsaOaepPrivateKey {
     Map<String, dynamic> jwk,
     Hash hash,
   ) async {
+    _checkRsaPrivateJwk(jwk);
     final impl = await webCryptImpl.rsaOaepPrivateKey.importJsonWebKey(
-      jwk,
+      _normalizeLegacyRsaOaepJwkAlg(jwk, hash),
       hash._impl,
     );
     return RsaOaepPrivateKey._(impl);
@@ -237,6 +227,7 @@ final class RsaOaepPrivateKey {
     BigInt publicExponent,
     Hash hash,
   ) async {
+    _checkRsaModulusLength(modulusLength);
     final (privateKeyImpl, publicKeyImpl) = await webCryptImpl.rsaOaepPrivateKey
         .generateKey(modulusLength, publicExponent, hash._impl);
 
@@ -468,7 +459,7 @@ final class RsaOaepPublicKey {
     Hash hash,
   ) async {
     final impl = await webCryptImpl.rsaOaepPublicKey.importJsonWebKey(
-      jwk,
+      _normalizeLegacyRsaOaepJwkAlg(jwk, hash),
       hash._impl,
     );
     return RsaOaepPublicKey._(impl);
@@ -487,10 +478,10 @@ final class RsaOaepPublicKey {
   /// [section 2.1.4 of "A Proposal for an ISO Standard for Public Key Encryption"][1].
   ///
   /// The size of the [data] to be encrypted is limited to
-  /// `data.length <= (modulusLength - 2 * hashLength - 2) / 8`, where
-  /// `hashLength` and `modulusLength` are given in bits.
-  /// For example, a 2048 bit RSA key with [Hash.sha256] cannot encrypt messages
-  /// larger than 191 bytes.
+  /// `data.length <= modulusByteLength - 2 * hashByteLength - 2`, where the
+  /// modulus and hash output lengths are measured in bytes.
+  /// For example, a 2048-bit RSA key with [Hash.sha256] can encrypt at most
+  /// 190 bytes.
   /// For this reason, RSAES-OAEP is often used to encrypt/decrypt a random
   /// one-time key for a symmetric cipher like [AesCbcSecretKey],
   /// [AesCtrSecretKey] or [AesGcmSecretKey], after which the symmetric cipher

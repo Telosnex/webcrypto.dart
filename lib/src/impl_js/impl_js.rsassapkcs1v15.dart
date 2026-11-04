@@ -147,7 +147,7 @@ final class _RsaSsaPkcs1V15PrivateKeyImpl
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'sig');
   }
 
   @override
@@ -194,12 +194,13 @@ final class _RsaSsaPkcs1V15PublicKeyImpl
 
   @override
   Future<bool> verifyStream(List<int> signature, Stream<List<int>> data) async {
-    return await verifyBytes(signature, await _bufferStream(data));
+    final signatureSnapshot = Uint8List.fromList(signature);
+    return await verifyBytes(signatureSnapshot, await _bufferStream(data));
   }
 
   @override
   Future<Map<String, dynamic>> exportJsonWebKey() async {
-    return await _exportJsonWebKey(_key);
+    return await _exportJsonWebKey(_key, jwkUse: 'sig');
   }
 
   @override

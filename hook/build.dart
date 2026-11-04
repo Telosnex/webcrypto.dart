@@ -45,16 +45,28 @@ void main(List<String> args) async {
       ..level = Level.ALL
       ..onRecord.listen((record) => hookLog.add(record.message));
 
-    await Kiln(input: input, output: output, log: logger.info).run((
-      source,
-    ) async {
+    if (code.sanitizer != null) {
+      // The prebuilt libraries are not instrumented: always build from source.
+      final sourceKey = await computeSourceKey(input.packageRoot);
+      logger.info('Building from source for sanitizer ${code.sanitizer!.name}');
       await _buildFromSource(
         input: input,
         output: output,
-        sourceKey: source.sourceKey.key,
+        sourceKey: sourceKey.key,
         logger: logger,
       );
-    });
+    } else {
+      await Kiln(input: input, output: output, log: logger.info).run((
+        source,
+      ) async {
+        await _buildFromSource(
+          input: input,
+          output: output,
+          sourceKey: source.sourceKey.key,
+          logger: logger,
+        );
+      });
+    }
     logger.info('Hook completed in ${_formatDuration(hookStopwatch.elapsed)}');
   }).whenComplete(hookLog.flush);
 }
@@ -66,9 +78,14 @@ Future<void> _buildFromSource({
   required Logger logger,
 }) async {
   final code = input.config.code;
+  final sanitizer = code.sanitizer;
   final defines = <String, String>{
     'CMAKE_BUILD_TYPE': 'Release',
     'CMAKE_POSITION_INDEPENDENT_CODE': 'ON',
+    if (sanitizer != null) 'CMAKE_TOOLCHAIN_FILE': '',
+    if (sanitizer != null) 'CMAKE_C_COMPILER': 'clang',
+    if (sanitizer != null) 'CMAKE_CXX_COMPILER': 'clang++',
+    if (sanitizer != null) 'WEBCRYPTO_SANITIZER': sanitizer.name,
   };
   final buildKey = await _computeBuildKey(
     code: code,
@@ -118,6 +135,8 @@ Future<void> _buildFromSource({
       '${_formatDuration(lockAndBuildStopwatch.elapsed)}',
     );
   }
+
+  output.dependencies.addAll(buildDependencies(input.packageRoot));
 
   final publishStopwatch = Stopwatch()..start();
   final publishedLibrary = await _publish(
@@ -458,4 +477,36 @@ Future<String> _listBuildOutput(Directory directory) async {
     }
   }
   return lines.join('\n');
+}
+
+final _buildDependencyExtensions = {
+  '.S',
+  '.asm',
+  '.c',
+  '.cc',
+  '.cmake',
+  '.cpp',
+  '.h',
+  '.inc',
+};
+
+/// The files a source build reads: CMake files and C/C++/assembly sources
+/// and includes under `src/` and `third_party/boringssl/`.
+Iterable<Uri> buildDependencies(Uri packageRoot) sync* {
+  yield* _filesForBuild(Directory.fromUri(packageRoot.resolve('src/')));
+  yield* _filesForBuild(
+    Directory.fromUri(packageRoot.resolve('third_party/boringssl/')),
+  );
+}
+
+Iterable<Uri> _filesForBuild(Directory root) sync* {
+  if (!root.existsSync()) return;
+  for (final entity in root.listSync(recursive: true, followLinks: false)) {
+    if (entity is! File) continue;
+    if (entity.uri.pathSegments.last != 'CMakeLists.txt' &&
+        !_buildDependencyExtensions.any(entity.uri.path.endsWith)) {
+      continue;
+    }
+    yield entity.uri;
+  }
 }
