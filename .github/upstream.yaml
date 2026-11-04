@@ -1,0 +1,9 @@
+# Upstream sources, checked daily by the Upstream watch workflow
+# (telosnex_ci_tools, lib/src/upstream.dart). Set `seen` to skip an update.
+# BoringSSL has no releases and changes daily: alert when the pin is a month
+# behind. Update with the Roll BoringSSL workflow.
+sources:
+  - name: BoringSSL
+    branch: https://github.com/google/boringssl
+    pin: {file: tool/REVISION, pattern: '([0-9a-f]{40})'}
+    lag_days: 30
