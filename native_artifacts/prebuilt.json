@@ -1,62 +1,62 @@
 {
   "schema": 1,
-  "sourceKey": "fdcb040a60a7f04932dc2266ba3f2b1b1642f3f2c288590ad20ea3096ed18fb7",
-  "release": "https://github.com/Telosnex/webcrypto.dart/releases/tag/native-fdcb040a60a7f049",
+  "sourceKey": "915dcd84d3b5df6a9a76eff7605a9aa70622bbbfaa83fcd9b82b9335dac6761f",
+  "release": "https://github.com/Telosnex/webcrypto.dart/releases/tag/native-915dcd84d3b5df6a",
   "targets": {
     "android-arm": {
-      "runner": "ubuntu22 20261026.341.1",
+      "runner": "ubuntu22 20261101.347.1",
       "toolchain": "Android NDK 28.2.13676358, cmake version 3.31.6",
       "minOSVersion": 24,
       "files": [
         {
           "name": "libwebcrypto.so",
-          "sha256": "b6f1c5c0c05e17eadfae63f5480a45cca9211521ccf0fbe5fef407e6b9d00c03",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/android-arm-libwebcrypto.so.gz",
-          "downloadSha256": "d387dec0622b0f04c3b9c55ad50e5d2d39e0475b37a16336a0cf985544bf0432",
+          "sha256": "4f4b6345ad7469b8ea8fe732f756e74ad7b7dc58125a5ce39b656d110cfbb160",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/android-arm-libwebcrypto.so.gz",
+          "downloadSha256": "b6c559ec71323f4859ca3eb61cc4de862eb1a70e3614dfca9b76cc8f75da1781",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
         }
       ]
     },
     "android-arm64": {
-      "runner": "ubuntu22 20261026.341.1",
+      "runner": "ubuntu22 20261101.347.1",
       "toolchain": "Android NDK 28.2.13676358, cmake version 3.31.6",
       "minOSVersion": 24,
       "files": [
         {
           "name": "libwebcrypto.so",
-          "sha256": "1c5a0d65dda7f9e2a82136ffee383ac1c8a4c82819f296e795c51f401897bd61",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/android-arm64-libwebcrypto.so.gz",
-          "downloadSha256": "77353669977c1907fed1c1eb0177535f0b1a7a00df0a91773a7ab69171807598",
+          "sha256": "f04df3e0e2eb2776307f68108f66cc8065ac8d35f7e054d0ed4a747f7b29bd29",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/android-arm64-libwebcrypto.so.gz",
+          "downloadSha256": "eac3f55e2619cc1a2adeb237dbe07de0585f39a56fa3bc9079bf8f1c2f0ac9a6",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
         }
       ]
     },
     "android-x64": {
-      "runner": "ubuntu22 20261026.341.1",
+      "runner": "ubuntu22 20261101.347.1",
       "toolchain": "Android NDK 28.2.13676358, cmake version 3.31.6",
       "minOSVersion": 24,
       "files": [
         {
           "name": "libwebcrypto.so",
-          "sha256": "6e60993bffb29877dfc19073752175f2857a5757f04c08db4637c789d75f3920",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/android-x64-libwebcrypto.so.gz",
-          "downloadSha256": "ea82b803d2b2efd27dcdf2b890afd508cfbb1c9efe6ab809817dd5f7c9a89d31",
+          "sha256": "a23d0adc86f83c10e559831e0506aa72e646e41518294fbb3ec6842a031e003a",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/android-x64-libwebcrypto.so.gz",
+          "downloadSha256": "f199e8083bb600227fed8830b54412860f4016390a36aa434ffc29a588f6d483",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
         }
       ]
     },
     "ios-arm64-iphoneos": {
-      "runner": "macos15 20261028.0489.1",
-      "toolchain": "Xcode 16.4, cmake version 4.4.4",
+      "runner": "macos15 20261104.0514.1",
+      "toolchain": "Xcode 16.4, cmake version 4.4.5",
       "minOSVersion": 13,
       "files": [
         {
           "name": "libwebcrypto.dylib",
           "sha256": "a6d431ff20127a247a09838dbbce3bc6e1679e819cb42cb14ac4349db3c4ac8c",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/ios-arm64-iphoneos-libwebcrypto.dylib.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/ios-arm64-iphoneos-libwebcrypto.dylib.gz",
           "downloadSha256": "0b9581badbbb595cb07f24dcae3bce684d3121b17e1430bc5c3208b9d03a62d5",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -64,14 +64,14 @@
       ]
     },
     "ios-arm64-iphonesimulator": {
-      "runner": "macos15 20261028.0489.1",
-      "toolchain": "Xcode 16.4, cmake version 4.4.4",
+      "runner": "macos15 20261104.0514.1",
+      "toolchain": "Xcode 16.4, cmake version 4.4.5",
       "minOSVersion": 13,
       "files": [
         {
           "name": "libwebcrypto.dylib",
           "sha256": "90a20819380cc4871187eb3256f54c9d880724dc0f587b1b72916eec2e074661",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/ios-arm64-iphonesimulator-libwebcrypto.dylib.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/ios-arm64-iphonesimulator-libwebcrypto.dylib.gz",
           "downloadSha256": "546095fb6c68b2d81e2c52d833e98340f61a3ecb7836ebf0b9f16e03404434b4",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -79,14 +79,14 @@
       ]
     },
     "ios-x64-iphonesimulator": {
-      "runner": "macos15 20261028.0489.1",
-      "toolchain": "Xcode 16.4, cmake version 4.4.4",
+      "runner": "macos15 20261104.0514.1",
+      "toolchain": "Xcode 16.4, cmake version 4.4.5",
       "minOSVersion": 13,
       "files": [
         {
           "name": "libwebcrypto.dylib",
           "sha256": "4829448997180cd6ea174b7d236bf882f16dbc487f2e135454c8146afffe5833",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/ios-x64-iphonesimulator-libwebcrypto.dylib.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/ios-x64-iphonesimulator-libwebcrypto.dylib.gz",
           "downloadSha256": "39d0666c37b9ec68b5685efc55d9bc42024a203d4e4bbafb7fa08a53845931d0",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -94,13 +94,13 @@
       ]
     },
     "linux-arm64": {
-      "runner": "ubuntu22-arm64 20261026.173.1",
+      "runner": "ubuntu22-arm64 20261101.179.1",
       "toolchain": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0, cmake version 3.31.6",
       "files": [
         {
           "name": "libwebcrypto.so",
           "sha256": "65db805f157adabdf83095915dd7e317b3479e1148d6941d9c1b3c28ad568404",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/linux-arm64-libwebcrypto.so.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/linux-arm64-libwebcrypto.so.gz",
           "downloadSha256": "a21a12811fdcfcdaa2265e8abed00934ca02787ee7e0a54f15ba9077ecac9dec",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -114,7 +114,7 @@
         {
           "name": "libwebcrypto.so",
           "sha256": "6e25a4ad41d21971e8a223e95674a97fc8a3e4a212ba0f011d82d711346c5818",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/linux-x64-libwebcrypto.so.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/linux-x64-libwebcrypto.so.gz",
           "downloadSha256": "5e06e65b8b3e8da741989ae77ca8994f5bd105394f32044c8b292add46993ca7",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -122,14 +122,14 @@
       ]
     },
     "macos-arm64": {
-      "runner": "macos15 20261028.0489.1",
-      "toolchain": "Xcode 16.4, cmake version 4.4.4",
+      "runner": "macos15 20261104.0514.1",
+      "toolchain": "Xcode 16.4, cmake version 4.4.5",
       "minOSVersion": 12,
       "files": [
         {
           "name": "libwebcrypto.dylib",
           "sha256": "89d60e9dac9a0850e064cc7c935f1ff4568ec9a984a3fe60a3e4363429569d5f",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/macos-arm64-libwebcrypto.dylib.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/macos-arm64-libwebcrypto.dylib.gz",
           "downloadSha256": "ee3e95c18cf000f705da601d43b8e7d78b6ae1288794c949a5654273c1566ae8",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -137,14 +137,14 @@
       ]
     },
     "macos-x64": {
-      "runner": "macos15 20261028.0489.1",
-      "toolchain": "Xcode 16.4, cmake version 4.4.4",
+      "runner": "macos15 20261104.0514.1",
+      "toolchain": "Xcode 16.4, cmake version 4.4.5",
       "minOSVersion": 12,
       "files": [
         {
           "name": "libwebcrypto.dylib",
           "sha256": "f574c753d80a21f3e1938a813cf4d18bd9968909ed2462648fecb1c69d4c7c42",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/macos-x64-libwebcrypto.dylib.gz",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/macos-x64-libwebcrypto.dylib.gz",
           "downloadSha256": "666e0a346d13fac9341395353e3d2c10ddff1f4ca144c0b63cefcd37c9da42a4",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
@@ -157,23 +157,23 @@
       "files": [
         {
           "name": "webcrypto.dll",
-          "sha256": "19ee49b80dbb701d85c91798bd27419425f7dcd17bd9518c14905d153f471fa3",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/windows-arm64-webcrypto.dll.gz",
-          "downloadSha256": "0fe8569cbee890535f50eef4fb2c16a0bca32c9310597e25c2ca6816ee1a8f73",
+          "sha256": "ef2b36af531f727ee6c15f5e3cfd465dc80a55d4c0a61a5485eea89f74cf9f16",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/windows-arm64-webcrypto.dll.gz",
+          "downloadSha256": "8bc4569b3494bc4679e5c9d0c3ed5343bb3e51c1bb249802f65a8364828e3b0b",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
         }
       ]
     },
     "windows-x64": {
-      "runner": "win22 20261026.347.1",
-      "toolchain": "Visual Studio 17.14.43, cmake version 3.31.6, NASM 2.16.03",
+      "runner": "win22 20261101.353.1",
+      "toolchain": "Visual Studio 17.14.44, cmake version 3.31.6, NASM 2.16.03",
       "files": [
         {
           "name": "webcrypto.dll",
-          "sha256": "271f8206d6d7689e3986daac1a6cfa533d95f1d52dd20949cf7df0d045ac38ad",
-          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-fdcb040a60a7f049/windows-x64-webcrypto.dll.gz",
-          "downloadSha256": "6b54fc51e200f789997c9a2bfbf523c0b2691efe1423b0ad55fa71432240d039",
+          "sha256": "a45441803199f21f783a2b6711f52b2c84a5be5e4ea553eaf2e11962192807b3",
+          "url": "https://github.com/Telosnex/webcrypto.dart/releases/download/native-915dcd84d3b5df6a/windows-x64-webcrypto.dll.gz",
+          "downloadSha256": "c50d5edc7dc549767e854d79f6cfe9df7f521902f74c65949a1eed40bc829ae9",
           "delivery": "bundle",
           "asset": "webcrypto.dart"
         }
