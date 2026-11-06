@@ -1,4 +1,5 @@
 # 0.6.2-wip
+* Requires `code_assets` 2.2, `hooks` 2.2 and `kiln` 0.2.
 * Synced with the latest upstream `google/webcrypto.dart` changes.
 * Added a content-addressed native build cache under `~/.cache/webcrypto.dart`
   to avoid recompiling BoringSSL when the native inputs are unchanged.

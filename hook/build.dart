@@ -340,9 +340,11 @@ Future<String> _computeBuildKey({
     addText('androidApi=${code.android.targetNdkApi}');
   } else if (code.targetOS == OS.iOS) {
     addText('iosSdk=${code.iOS.targetSdk}');
-    addText('iosVersion=${code.iOS.targetVersion}');
+    final v = code.iOS.deploymentVersion;
+    addText('iosVersion=${v.major}.${v.minor}.${v.patch}');
   } else if (code.targetOS == OS.macOS) {
-    addText('macosVersion=${code.macOS.targetVersion}');
+    final v = code.macOS.deploymentVersion;
+    addText('macosVersion=${v.major}.${v.minor}.${v.patch}');
   }
   for (final define
       in defines.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
