@@ -264,22 +264,19 @@ Future<void> _buildIntoCache({
 }
 
 void _validateTarget(OS os, Architecture architecture) {
+  // Not const: Architecture overrides == (code_assets 2).
   final supported = switch (os) {
-    OS.android => const {
+    OS.android => {
       Architecture.arm,
       Architecture.arm64,
       Architecture.ia32,
       Architecture.x64,
     },
-    OS.iOS => const {Architecture.arm64, Architecture.x64},
-    OS.linux => const {Architecture.arm64, Architecture.x64},
-    OS.macOS => const {Architecture.arm64, Architecture.x64},
-    OS.windows => const {
-      Architecture.arm64,
-      Architecture.ia32,
-      Architecture.x64,
-    },
-    _ => const <Architecture>{},
+    OS.iOS => {Architecture.arm64, Architecture.x64},
+    OS.linux => {Architecture.arm64, Architecture.x64},
+    OS.macOS => {Architecture.arm64, Architecture.x64},
+    OS.windows => {Architecture.arm64, Architecture.ia32, Architecture.x64},
+    _ => <Architecture>{},
   };
   if (!supported.contains(architecture)) {
     throw UnsupportedError(

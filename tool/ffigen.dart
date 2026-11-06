@@ -16,18 +16,20 @@ import 'dart:io';
 
 import 'package:ffigen/ffigen.dart';
 
-void main() {
+Future<void> main() async {
   final packageRoot = Platform.script.resolve('../');
 
-  generateWebCryptoBindings(packageRoot);
-  generateBoringSslBindings(packageRoot);
+  await generateWebCryptoBindings(packageRoot);
+  await generateBoringSslBindings(packageRoot);
 }
 
-void generateWebCryptoBindings(Uri packageRoot) {
-  FfiGenerator(
+Future<void> generateWebCryptoBindings(Uri packageRoot) {
+  return FfiGenerator(
     output: Output(
-      dartFile: packageRoot.resolve(
-        'lib/src/boringssl/bindings/generated_bindings.dart',
+      dart: DartOutput(
+        path: packageRoot.resolve(
+          'lib/src/boringssl/bindings/generated_bindings.dart',
+        ),
       ),
       style: const NativeExternalBindings(
         assetId: 'package:webcrypto/webcrypto.dart',
@@ -53,19 +55,24 @@ void generateWebCryptoBindings(Uri packageRoot) {
 // ignore_for_file: non_constant_identifier_names
 ''',
     ),
-    headers: Headers(entryPoints: [packageRoot.resolve('src/webcrypto.h')]),
-    functions: Functions(
-      include: Declarations.includeSet({'webcrypto_get_CBB_size'}),
-    ),
-    structs: const Structs(dependencies: CompoundDependencies.opaque),
+    input: Input(entryPoints: [packageRoot.resolve('src/webcrypto.h')]),
+    visitors: [
+      Visitor(
+        func: (node) =>
+            node.isIncluded = node.originalName == 'webcrypto_get_CBB_size',
+        struct: (node) => node.dependencies = CompoundDependencies.opaque,
+      ),
+    ],
   ).generate();
 }
 
-void generateBoringSslBindings(Uri packageRoot) {
-  FfiGenerator(
+Future<void> generateBoringSslBindings(Uri packageRoot) {
+  return FfiGenerator(
     output: Output(
-      dartFile: packageRoot.resolve(
-        'lib/src/third_party/boringssl/generated_bindings.dart',
+      dart: DartOutput(
+        path: packageRoot.resolve(
+          'lib/src/third_party/boringssl/generated_bindings.dart',
+        ),
       ),
       style: const NativeExternalBindings(
         assetId: 'package:webcrypto/webcrypto.dart',
@@ -131,7 +138,7 @@ void generateBoringSslBindings(Uri packageRoot) {
 // ignore_for_file: unused_field
 ''',
     ),
-    headers: Headers(
+    input: Input(
       entryPoints: [
         packageRoot.resolve('third_party/boringssl/src/include/openssl/aead.h'),
         packageRoot.resolve('third_party/boringssl/src/include/openssl/aes.h'),
@@ -170,218 +177,229 @@ void generateBoringSslBindings(Uri packageRoot) {
         '-U__PRAGMA_REDEFINE_EXTNAME',
       ],
     ),
-    macros: Macros(
-      include: Declarations.includeSet({
-        'AES_BLOCK_SIZE',
-        'EC_PKEY_NO_PUBKEY',
-        'EVP_PKEY_EC',
-        'EVP_PKEY_RSA',
-        'HKDF_R_OUTPUT_TOO_LARGE',
-        'NID_secp384r1',
-        'NID_secp521r1',
-        'NID_X9_62_prime256v1',
-        'RSA_PKCS1_OAEP_PADDING',
-        'RSA_PKCS1_PADDING',
-        'RSA_PKCS1_PSS_PADDING',
-      }),
-    ),
-    enums: Enums(
-      include: Declarations.includeSet({'point_conversion_form_t'}),
-      style: (decl, suggestedStyle) => EnumStyle.intConstants,
-    ),
-    unnamedEnums: UnnamedEnums(
-      include: Declarations.includeSet({'ERR_LIB_HKDF'}),
-    ),
-    structs: Structs(
-      include: Declarations.includeSet({'cbs_st', 'cbb_st'}),
-      dependencies: CompoundDependencies.opaque,
-    ),
     // BoringSSL uses a pointer-sized unsigned word on both 32-bit and 64-bit
     // targets. Generation runs on a 64-bit host, so map this typedef explicitly.
-    typedefs: Typedefs(
-      // ignore: deprecated_member_use
-      imported: [
-        ImportedType(
-          const LibraryImport('ffi', 'dart:ffi'),
-          'UintPtr',
-          'int',
-          'BN_ULONG',
-        ),
-      ],
-      include: Declarations.includeSet({
-        'BIGNUM',
-        'BN_CTX',
-        'BN_GENCB',
-        'BN_ULONG',
-        'CBB',
-        'CBS',
-        'ECDSA_SIG',
-        'EC_GROUP',
-        'EC_KEY',
-        'EC_POINT',
-        'ENGINE',
-        'EVP_AEAD',
-        'EVP_AEAD_CTX',
-        'EVP_CIPHER',
-        'EVP_CIPHER_CTX',
-        'EVP_MD',
-        'EVP_MD_CTX',
-        'EVP_PKEY',
-        'EVP_PKEY_CTX',
-        'HMAC_CTX',
-        'RSA',
-      }),
-    ),
-    functions: Functions(
-      include: Declarations.includeSet({
-        // Source of truth for BoringSSL entry points bound from Dart.
-        'webcrypto_BN_bin2bn',
-        'webcrypto_BN_bn2bin_padded',
-        'webcrypto_BN_free',
-        'webcrypto_BN_new',
-        'webcrypto_BN_num_bytes',
-        'webcrypto_BN_set_word',
-        'webcrypto_CBB_cleanup',
-        'webcrypto_CBB_data',
-        'webcrypto_CBB_flush',
-        'webcrypto_CBB_init',
-        'webcrypto_CBB_len',
-        'webcrypto_CBB_zero',
-        'webcrypto_CRYPTO_memcmp',
-        'webcrypto_ECDH_compute_key',
-        'webcrypto_ECDSA_SIG_free',
-        'webcrypto_ECDSA_SIG_get0',
-        'webcrypto_ECDSA_SIG_marshal',
-        'webcrypto_ECDSA_SIG_new',
-        'webcrypto_ECDSA_SIG_parse',
-        'webcrypto_EC_GROUP_get0_order',
-        'webcrypto_EC_GROUP_get_curve_name',
-        'webcrypto_EC_GROUP_get_degree',
-        'webcrypto_EC_KEY_check_key',
-        'webcrypto_EC_KEY_free',
-        'webcrypto_EC_KEY_generate_key',
-        'webcrypto_EC_KEY_get0_group',
-        'webcrypto_EC_KEY_get0_private_key',
-        'webcrypto_EC_KEY_get0_public_key',
-        'webcrypto_EC_KEY_get_enc_flags',
-        'webcrypto_EC_KEY_new_by_curve_name',
-        'webcrypto_EC_KEY_set_enc_flags',
-        'webcrypto_EC_KEY_set_private_key',
-        'webcrypto_EC_KEY_set_public_key',
-        'webcrypto_EC_KEY_set_public_key_affine_coordinates',
-        'webcrypto_EC_POINT_free',
-        'webcrypto_EC_POINT_get_affine_coordinates_GFp',
-        'webcrypto_EC_POINT_new',
-        'webcrypto_EC_POINT_oct2point',
-        'webcrypto_EC_POINT_point2cbb',
-        'webcrypto_ERR_clear_error',
-        'webcrypto_ERR_error_string_n',
-        'webcrypto_ERR_get_error',
-        'webcrypto_ERR_peek_error',
-        'webcrypto_EVP_aead_aes_128_gcm',
-        'webcrypto_EVP_aead_aes_256_gcm',
-        'webcrypto_EVP_AEAD_CTX_free',
-        'webcrypto_EVP_AEAD_CTX_new',
-        'webcrypto_EVP_AEAD_CTX_open',
-        'webcrypto_EVP_AEAD_CTX_seal',
-        'webcrypto_EVP_AEAD_max_overhead',
-        'webcrypto_EVP_aes_128_cbc',
-        'webcrypto_EVP_aes_128_ctr',
-        'webcrypto_EVP_aes_256_cbc',
-        'webcrypto_EVP_aes_256_ctr',
-        'webcrypto_EVP_CIPHER_CTX_free',
-        'webcrypto_EVP_CIPHER_CTX_new',
-        'webcrypto_EVP_CipherFinal_ex',
-        'webcrypto_EVP_CipherInit_ex',
-        'webcrypto_EVP_CIPHER_iv_length',
-        'webcrypto_EVP_CipherUpdate',
-        'webcrypto_EVP_DigestFinal',
-        'webcrypto_EVP_DigestInit',
-        'webcrypto_EVP_DigestSignFinal',
-        'webcrypto_EVP_DigestSignInit',
-        'webcrypto_EVP_DigestSignUpdate',
-        'webcrypto_EVP_DigestUpdate',
-        'webcrypto_EVP_DigestVerifyFinal',
-        'webcrypto_EVP_DigestVerifyInit',
-        'webcrypto_EVP_DigestVerifyUpdate',
-        'webcrypto_EVP_marshal_private_key',
-        'webcrypto_EVP_marshal_public_key',
-        'webcrypto_EVP_MD_CTX_free',
-        'webcrypto_EVP_MD_CTX_new',
-        'webcrypto_EVP_MD_CTX_size',
-        'webcrypto_EVP_parse_private_key',
-        'webcrypto_EVP_parse_public_key',
-        'webcrypto_EVP_PKEY_CTX_free',
-        'webcrypto_EVP_PKEY_CTX_new',
-        'webcrypto_EVP_PKEY_CTX_set0_rsa_oaep_label',
-        'webcrypto_EVP_PKEY_CTX_set_rsa_mgf1_md',
-        'webcrypto_EVP_PKEY_CTX_set_rsa_oaep_md',
-        'webcrypto_EVP_PKEY_CTX_set_rsa_padding',
-        'webcrypto_EVP_PKEY_CTX_set_rsa_pss_saltlen',
-        'webcrypto_EVP_PKEY_decrypt',
-        'webcrypto_EVP_PKEY_decrypt_init',
-        'webcrypto_EVP_PKEY_encrypt',
-        'webcrypto_EVP_PKEY_encrypt_init',
-        'webcrypto_EVP_PKEY_free',
-        'webcrypto_EVP_PKEY_get1_EC_KEY',
-        'webcrypto_EVP_PKEY_get1_RSA',
-        'webcrypto_EVP_PKEY_id',
-        'webcrypto_EVP_PKEY_new',
-        'webcrypto_EVP_PKEY_set1_EC_KEY',
-        'webcrypto_EVP_PKEY_set1_RSA',
-        'webcrypto_EVP_sha1',
-        'webcrypto_EVP_sha256',
-        'webcrypto_EVP_sha384',
-        'webcrypto_EVP_sha512',
-        'webcrypto_HKDF',
-        'webcrypto_HMAC_CTX_free',
-        'webcrypto_HMAC_CTX_new',
-        'webcrypto_HMAC_Final',
-        'webcrypto_HMAC_Init_ex',
-        'webcrypto_HMAC_size',
-        'webcrypto_HMAC_Update',
-        'webcrypto_OPENSSL_malloc',
-        'webcrypto_PKCS5_PBKDF2_HMAC',
-        'webcrypto_RAND_bytes',
-        'webcrypto_RSA_check_key',
-        'webcrypto_RSA_free',
-        'webcrypto_RSA_generate_key_ex',
-        'webcrypto_RSA_get0_crt_params',
-        'webcrypto_RSA_get0_factors',
-        'webcrypto_RSA_get0_key',
-        'webcrypto_RSA_new',
-        'webcrypto_RSAPublicKey_dup',
-        'webcrypto_RSA_set0_crt_params',
-        'webcrypto_RSA_set0_factors',
-        'webcrypto_RSA_set0_key',
-        // These are referenced, just need to be sorted right.
-        'webcrypto_OPENSSL_free',
-        'webcrypto_OPENSSL_memdup',
-        'webcrypto_EVP_MD_size',
-        // Not used but maybe they should be:
-        'webcrypto_EVP_AEAD_nonce_length',
-        'webcrypto_EVP_AEAD_max_tag_len',
-        // Not used by nice to have, maybe, or maybe we remove / comment them out
-        'webcrypto_EVP_AEAD_key_length',
-        'webcrypto_BN_value_one',
-        'webcrypto_BN_add',
-        'webcrypto_BN_sub',
-        'webcrypto_BN_cmp',
-        'webcrypto_BN_lshift',
-        'webcrypto_EVP_CIPHER_block_size',
-        'webcrypto_EC_GROUP_new_by_curve_name',
-        'webcrypto_EC_GROUP_free',
-        'webcrypto_EVP_PKEY_set_type',
-        // Self testing only..
-        'webcrypto_BORINGSSL_self_test',
-      }),
-      rename: (decl) {
-        final name = decl.originalName;
-        if (name.startsWith('webcrypto_')) {
-          return name.substring('webcrypto_'.length);
-        }
-        return name;
-      },
-    ),
+    importType: (declaration) => declaration.originalName == 'BN_ULONG'
+        ? ImportedType(
+            const LibraryImport('ffi', 'dart:ffi'),
+            'UintPtr',
+            'int',
+            'BN_ULONG',
+          )
+        : null,
+    visitors: [
+      Visitor(
+        macroConstant: (node) =>
+            node.isIncluded = _boringSslMacros.contains(node.originalName),
+        enumClass: (node) {
+          node.isIncluded = _boringSslEnums.contains(node.originalName);
+          node.style = EnumStyle.intConstants;
+        },
+        unnamedEnumConstant: (node) => node.isIncluded = _boringSslUnnamedEnums
+            .contains(node.originalName),
+        struct: (node) {
+          node.isIncluded = _boringSslStructs.contains(node.originalName);
+          node.dependencies = CompoundDependencies.opaque;
+        },
+        typealias: (node) =>
+            node.isIncluded = _boringSslTypedefs.contains(node.originalName)
+            ? TypealiasInclude.ifUsed
+            : TypealiasInclude.never,
+        func: (node) {
+          node.isIncluded = _boringSslFunctions.contains(node.originalName);
+          final name = node.originalName;
+          if (name.startsWith('webcrypto_')) {
+            node.name = name.substring('webcrypto_'.length);
+          }
+        },
+      ),
+    ],
   ).generate();
 }
+
+const _boringSslMacros = {
+  'AES_BLOCK_SIZE',
+  'EC_PKEY_NO_PUBKEY',
+  'EVP_PKEY_EC',
+  'EVP_PKEY_RSA',
+  'HKDF_R_OUTPUT_TOO_LARGE',
+  'NID_secp384r1',
+  'NID_secp521r1',
+  'NID_X9_62_prime256v1',
+  'RSA_PKCS1_OAEP_PADDING',
+  'RSA_PKCS1_PADDING',
+  'RSA_PKCS1_PSS_PADDING',
+};
+
+const _boringSslEnums = {'point_conversion_form_t'};
+
+const _boringSslUnnamedEnums = {'ERR_LIB_HKDF'};
+
+const _boringSslStructs = {'cbs_st', 'cbb_st'};
+
+const _boringSslTypedefs = {
+  'BIGNUM',
+  'BN_CTX',
+  'BN_GENCB',
+  'BN_ULONG',
+  'CBB',
+  'CBS',
+  'ECDSA_SIG',
+  'EC_GROUP',
+  'EC_KEY',
+  'EC_POINT',
+  'ENGINE',
+  'EVP_AEAD',
+  'EVP_AEAD_CTX',
+  'EVP_CIPHER',
+  'EVP_CIPHER_CTX',
+  'EVP_MD',
+  'EVP_MD_CTX',
+  'EVP_PKEY',
+  'EVP_PKEY_CTX',
+  'HMAC_CTX',
+  'RSA',
+};
+
+const _boringSslFunctions = {
+  // Source of truth for BoringSSL entry points bound from Dart.
+  'webcrypto_BN_bin2bn',
+  'webcrypto_BN_bn2bin_padded',
+  'webcrypto_BN_free',
+  'webcrypto_BN_new',
+  'webcrypto_BN_num_bytes',
+  'webcrypto_BN_set_word',
+  'webcrypto_CBB_cleanup',
+  'webcrypto_CBB_data',
+  'webcrypto_CBB_flush',
+  'webcrypto_CBB_init',
+  'webcrypto_CBB_len',
+  'webcrypto_CBB_zero',
+  'webcrypto_CRYPTO_memcmp',
+  'webcrypto_ECDH_compute_key',
+  'webcrypto_ECDSA_SIG_free',
+  'webcrypto_ECDSA_SIG_get0',
+  'webcrypto_ECDSA_SIG_marshal',
+  'webcrypto_ECDSA_SIG_new',
+  'webcrypto_ECDSA_SIG_parse',
+  'webcrypto_EC_GROUP_get0_order',
+  'webcrypto_EC_GROUP_get_curve_name',
+  'webcrypto_EC_GROUP_get_degree',
+  'webcrypto_EC_KEY_check_key',
+  'webcrypto_EC_KEY_free',
+  'webcrypto_EC_KEY_generate_key',
+  'webcrypto_EC_KEY_get0_group',
+  'webcrypto_EC_KEY_get0_private_key',
+  'webcrypto_EC_KEY_get0_public_key',
+  'webcrypto_EC_KEY_get_enc_flags',
+  'webcrypto_EC_KEY_new_by_curve_name',
+  'webcrypto_EC_KEY_set_enc_flags',
+  'webcrypto_EC_KEY_set_private_key',
+  'webcrypto_EC_KEY_set_public_key',
+  'webcrypto_EC_KEY_set_public_key_affine_coordinates',
+  'webcrypto_EC_POINT_free',
+  'webcrypto_EC_POINT_get_affine_coordinates_GFp',
+  'webcrypto_EC_POINT_new',
+  'webcrypto_EC_POINT_oct2point',
+  'webcrypto_EC_POINT_point2cbb',
+  'webcrypto_ERR_clear_error',
+  'webcrypto_ERR_error_string_n',
+  'webcrypto_ERR_get_error',
+  'webcrypto_ERR_peek_error',
+  'webcrypto_EVP_aead_aes_128_gcm',
+  'webcrypto_EVP_aead_aes_256_gcm',
+  'webcrypto_EVP_AEAD_CTX_free',
+  'webcrypto_EVP_AEAD_CTX_new',
+  'webcrypto_EVP_AEAD_CTX_open',
+  'webcrypto_EVP_AEAD_CTX_seal',
+  'webcrypto_EVP_AEAD_max_overhead',
+  'webcrypto_EVP_aes_128_cbc',
+  'webcrypto_EVP_aes_128_ctr',
+  'webcrypto_EVP_aes_256_cbc',
+  'webcrypto_EVP_aes_256_ctr',
+  'webcrypto_EVP_CIPHER_CTX_free',
+  'webcrypto_EVP_CIPHER_CTX_new',
+  'webcrypto_EVP_CipherFinal_ex',
+  'webcrypto_EVP_CipherInit_ex',
+  'webcrypto_EVP_CIPHER_iv_length',
+  'webcrypto_EVP_CipherUpdate',
+  'webcrypto_EVP_DigestFinal',
+  'webcrypto_EVP_DigestInit',
+  'webcrypto_EVP_DigestSignFinal',
+  'webcrypto_EVP_DigestSignInit',
+  'webcrypto_EVP_DigestSignUpdate',
+  'webcrypto_EVP_DigestUpdate',
+  'webcrypto_EVP_DigestVerifyFinal',
+  'webcrypto_EVP_DigestVerifyInit',
+  'webcrypto_EVP_DigestVerifyUpdate',
+  'webcrypto_EVP_marshal_private_key',
+  'webcrypto_EVP_marshal_public_key',
+  'webcrypto_EVP_MD_CTX_free',
+  'webcrypto_EVP_MD_CTX_new',
+  'webcrypto_EVP_MD_CTX_size',
+  'webcrypto_EVP_parse_private_key',
+  'webcrypto_EVP_parse_public_key',
+  'webcrypto_EVP_PKEY_CTX_free',
+  'webcrypto_EVP_PKEY_CTX_new',
+  'webcrypto_EVP_PKEY_CTX_set0_rsa_oaep_label',
+  'webcrypto_EVP_PKEY_CTX_set_rsa_mgf1_md',
+  'webcrypto_EVP_PKEY_CTX_set_rsa_oaep_md',
+  'webcrypto_EVP_PKEY_CTX_set_rsa_padding',
+  'webcrypto_EVP_PKEY_CTX_set_rsa_pss_saltlen',
+  'webcrypto_EVP_PKEY_decrypt',
+  'webcrypto_EVP_PKEY_decrypt_init',
+  'webcrypto_EVP_PKEY_encrypt',
+  'webcrypto_EVP_PKEY_encrypt_init',
+  'webcrypto_EVP_PKEY_free',
+  'webcrypto_EVP_PKEY_get1_EC_KEY',
+  'webcrypto_EVP_PKEY_get1_RSA',
+  'webcrypto_EVP_PKEY_id',
+  'webcrypto_EVP_PKEY_new',
+  'webcrypto_EVP_PKEY_set1_EC_KEY',
+  'webcrypto_EVP_PKEY_set1_RSA',
+  'webcrypto_EVP_sha1',
+  'webcrypto_EVP_sha256',
+  'webcrypto_EVP_sha384',
+  'webcrypto_EVP_sha512',
+  'webcrypto_HKDF',
+  'webcrypto_HMAC_CTX_free',
+  'webcrypto_HMAC_CTX_new',
+  'webcrypto_HMAC_Final',
+  'webcrypto_HMAC_Init_ex',
+  'webcrypto_HMAC_size',
+  'webcrypto_HMAC_Update',
+  'webcrypto_OPENSSL_malloc',
+  'webcrypto_PKCS5_PBKDF2_HMAC',
+  'webcrypto_RAND_bytes',
+  'webcrypto_RSA_check_key',
+  'webcrypto_RSA_free',
+  'webcrypto_RSA_generate_key_ex',
+  'webcrypto_RSA_get0_crt_params',
+  'webcrypto_RSA_get0_factors',
+  'webcrypto_RSA_get0_key',
+  'webcrypto_RSA_new',
+  'webcrypto_RSAPublicKey_dup',
+  'webcrypto_RSA_set0_crt_params',
+  'webcrypto_RSA_set0_factors',
+  'webcrypto_RSA_set0_key',
+  // These are referenced, just need to be sorted right.
+  'webcrypto_OPENSSL_free',
+  'webcrypto_OPENSSL_memdup',
+  'webcrypto_EVP_MD_size',
+  // Not used but maybe they should be:
+  'webcrypto_EVP_AEAD_nonce_length',
+  'webcrypto_EVP_AEAD_max_tag_len',
+  // Not used by nice to have, maybe, or maybe we remove / comment them out
+  'webcrypto_EVP_AEAD_key_length',
+  'webcrypto_BN_value_one',
+  'webcrypto_BN_add',
+  'webcrypto_BN_sub',
+  'webcrypto_BN_cmp',
+  'webcrypto_BN_lshift',
+  'webcrypto_EVP_CIPHER_block_size',
+  'webcrypto_EC_GROUP_new_by_curve_name',
+  'webcrypto_EC_GROUP_free',
+  'webcrypto_EVP_PKEY_set_type',
+  // Self testing only..
+  'webcrypto_BORINGSSL_self_test',
+};
