@@ -3,7 +3,7 @@
 # BoringSSL has no releases and changes daily: alert when the pin is a month
 # behind. Update with the Roll BoringSSL workflow.
 sources:
-  - name: BoringSSL
+  - name: google/boringssl
     branch: https://github.com/google/boringssl
     pin: {file: tool/REVISION, pattern: '([0-9a-f]{40})'}
     lag_days: 30
