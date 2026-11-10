@@ -7,3 +7,10 @@ sources:
     branch: https://github.com/google/boringssl
     pin: {file: tool/REVISION, pattern: '([0-9a-f]{40})'}
     lag_days: 30
+  # The repository this one is a fork of. The pin is the last upstream commit
+  # merged here: update it with each merge. Alert once the oldest unmerged
+  # commit is a week old.
+  - name: google/webcrypto.dart
+    branch: https://github.com/google/webcrypto.dart
+    pin: 9e186d9e7224e47d952f05a66c978b97896608a4
+    lag_days: 7
